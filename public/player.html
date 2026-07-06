@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Hitster Digital, Jogador</title>
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/player.css">
+</head>
+<body>
+
+<!-- ============ ENTRADA ============ -->
+<section id="p-join" class="pscreen">
+  <div class="join-card">
+    <div class="vinyl paused" style="--size:110px" aria-hidden="true"></div>
+    <h1>Entrar na sala <span id="join-code" class="num"></span></h1>
+    <label>Seu nome
+      <input id="join-name" maxlength="16" placeholder="Como te chamam?" autocomplete="nickname">
+    </label>
+    <p class="lbl">Escolha seu avatar</p>
+    <div id="emoji-grid" class="emoji-grid"></div>
+    <button id="btn-join" class="btn-gold">Entrar no jogo</button>
+    <p id="join-error" class="err"></p>
+  </div>
+</section>
+
+<!-- ============ LOBBY ============ -->
+<section id="p-lobby" class="pscreen hidden">
+  <div class="me-chip"><span id="me-emoji"></span> <span id="me-name"></span></div>
+  <h2>Aguardando o host iniciar...</h2>
+  <div id="team-picker" class="team-picker hidden">
+    <p class="lbl">Modo Equipes: escolha a sua</p>
+    <div class="team-btns">
+      <button data-team="Norte" class="btn-ghost">Norte</button>
+      <button data-team="Sul" class="btn-ghost">Sul</button>
+      <button data-team="Leste" class="btn-ghost">Leste</button>
+      <button data-team="Oeste" class="btn-ghost">Oeste</button>
+    </div>
+  </div>
+  <ul id="lobby-list" class="lobby-list"></ul>
+</section>
+
+<!-- ============ JOGO ============ -->
+<section id="p-game" class="pscreen hidden">
+  <header class="p-head">
+    <div class="me-chip"><span id="g-emoji"></span> <span id="g-name"></span></div>
+    <div class="stats num"><span id="g-fichas"></span> · <span id="g-cartas"></span></div>
+  </header>
+
+  <div id="g-status" class="g-status"></div>
+
+  <!-- botao de contestar -->
+  <button id="btn-contest" class="contest-btn" disabled>
+    CONTESTAR<small>usa 1 ficha, e voce joga a carta</small>
+  </button>
+
+  <!-- botao tocar novamente (jogador da vez) -->
+  <button id="btn-replay" class="btn-ghost replay hidden">🔁 Tocar trecho novamente</button>
+
+  <!-- posicionamento na linha do tempo -->
+  <div id="placer" class="placer hidden">
+    <p class="lbl" id="placer-label">Onde essa musica entra na sua linha do tempo?</p>
+    <div id="timeline" class="timeline"></div>
+    <button id="btn-confirm-slot" class="btn-gold" disabled>Confirmar posicao</button>
+  </div>
+
+  <!-- palpite de artista e musica -->
+  <div id="guesser" class="guesser hidden">
+    <p class="lbl" id="guess-label">Sabe qual e? Acerte artista e musica para ganhar 1 ficha</p>
+    <input id="guess-artist" placeholder="Artista ou autor original">
+    <input id="guess-title" placeholder="Nome da musica">
+    <input id="guess-year" class="hidden" type="number" placeholder="Ano exato (modo Expert)">
+    <div class="guess-actions">
+      <button id="btn-guess" class="btn-gold">Enviar palpite</button>
+      <button id="btn-skip-guess" class="btn-ghost">Nao sei</button>
+    </div>
+  </div>
+
+  <!-- resultado da rodada -->
+  <div id="p-reveal" class="p-reveal hidden"></div>
+
+  <!-- minha linha do tempo -->
+  <div class="my-line">
+    <p class="lbl">Sua linha do tempo</p>
+    <div id="my-timeline" class="my-timeline"></div>
+  </div>
+
+  <!-- reacoes e chat -->
+  <footer class="p-foot">
+    <div class="reactions">
+      <button data-r="🔥">🔥</button><button data-r="😂">😂</button>
+      <button data-r="😱">😱</button><button data-r="👏">👏</button><button data-r="🎯">🎯</button>
+    </div>
+    <form id="chat-form" class="chat-form">
+      <input id="chat-input" maxlength="140" placeholder="Mensagem rapida...">
+      <button class="btn-ghost" type="submit">➤</button>
+    </form>
+  </footer>
+</section>
+
+<!-- ============ FIM ============ -->
+<section id="p-end" class="pscreen hidden">
+  <h1 id="end-msg"></h1>
+  <p class="lbl">Aguarde a revanche na TV ou saia da sala.</p>
+  <button class="btn-ghost" onclick="location.href='/'">Sair</button>
+</section>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/player.js"></script>
+</body>
+</html>

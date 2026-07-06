@@ -1,0 +1,132 @@
+/* Hitster Digital: tokens compartilhados TV + celular
+   Direcao visual: jukebox de sala de estar. Fundo ameixa profundo, dourado de selo
+   de disco de 45 rpm, e cartas coloridas por decada (assinatura do jogo). */
+
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Outfit:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
+
+:root {
+  --ink: #1B1226;          /* ameixa profunda */
+  --ink-2: #251A33;
+  --cream: #F4E8CF;        /* selo de disco */
+  --cream-dim: #C9BCA2;
+  --gold: #E8B84B;
+  --gold-deep: #B8892E;
+  --hot: #FF5D73;          /* alerta / contestacao */
+  --ok: #5DDE8F;
+  --bad: #FF6B6B;
+
+  /* decadas (assinatura: cada carta ganha a cor da sua decada) */
+  --d1930: #8C7B6B; --d1940: #A98F5F; --d1950: #3FB8AF;
+  --d1960: #F28C38; --d1970: #C97B3D; --d1980: #E44FA3;
+  --d1990: #4E7DE0; --d2000: #55B84E; --d2010: #8E5BD8; --d2020: #E0483F;
+
+  --radius: 18px;
+  --font-display: 'Unbounded', sans-serif;
+  --font-body: 'Outfit', sans-serif;
+  --font-num: 'Space Grotesk', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--ink);
+  color: var(--cream);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .display { font-family: var(--font-display); letter-spacing: .01em; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+button {
+  font-family: var(--font-body);
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: transform .12s ease, filter .12s ease, opacity .12s ease;
+}
+button:active { transform: scale(.97); }
+button:disabled { opacity: .35; cursor: not-allowed; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.btn-gold { background: var(--gold); color: #2A1D07; padding: 14px 28px; font-size: 1.05rem; }
+.btn-ghost { background: transparent; color: var(--cream); border: 2px solid rgba(244,232,207,.35); padding: 12px 24px; }
+.btn-hot { background: var(--hot); color: #3A0712; padding: 14px 28px; }
+
+input, select {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  background: var(--ink-2);
+  color: var(--cream);
+  border: 2px solid rgba(244,232,207,.22);
+  border-radius: 12px;
+  padding: 12px 14px;
+  width: 100%;
+}
+
+/* -------- vinil giratorio (assinatura durante a reproducao) -------- */
+.vinyl {
+  --size: 320px;
+  width: var(--size); height: var(--size);
+  border-radius: 50%;
+  position: relative;
+  background:
+    radial-gradient(circle at 50% 50%, #0B0810 0 26%, transparent 26%),
+    repeating-radial-gradient(circle at 50% 50%, #171021 0 3px, #0E0A16 3px 6px);
+  box-shadow: 0 0 90px rgba(232,184,75,.14), inset 0 0 40px rgba(0,0,0,.8);
+  animation: spin 2.2s linear infinite;
+}
+.vinyl::before { /* selo central dourado com o logo */
+  content: 'HITSTER\ADIGITAL';
+  white-space: pre;
+  position: absolute; inset: 27%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--gold) 0 62%, var(--gold-deep) 100%);
+  color: #2A1D07;
+  display: grid; place-items: center;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: calc(var(--size) * .052);
+  line-height: 1.25;
+}
+.vinyl::after { /* furo central */
+  content: '';
+  position: absolute; inset: 48.5%;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.vinyl.paused { animation-play-state: paused; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .vinyl { animation-duration: 12s; }
+  * { transition: none !important; }
+}
+
+/* -------- carta de musica (cor pela decada) -------- */
+.card45 {
+  border-radius: 14px;
+  padding: 10px 12px;
+  min-width: 108px;
+  background: var(--ink-2);
+  border-top: 6px solid var(--dec, var(--gold));
+  box-shadow: 0 6px 18px rgba(0,0,0,.4);
+}
+.card45 .year { font-family: var(--font-num); font-weight: 700; font-size: 1.35rem; color: var(--dec, var(--gold)); }
+.card45 .song { font-size: .78rem; color: var(--cream); font-weight: 600; }
+.card45 .who { font-size: .68rem; color: var(--cream-dim); }
+
+.toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+  background: var(--ink-2); color: var(--cream);
+  border: 2px solid var(--gold);
+  padding: 12px 22px; border-radius: 999px;
+  font-weight: 600; z-index: 99;
+  box-shadow: 0 10px 30px rgba(0,0,0,.5);
+}
+.hidden { display: none !important; }

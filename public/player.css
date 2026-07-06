@@ -1,0 +1,95 @@
+/* Celular do jogador: mobile-first, botao de contestacao como elemento central */
+
+.pscreen { min-height: 100vh; min-height: 100dvh; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+
+#p-join { align-items: center; justify-content: center; }
+.join-card { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 14px; text-align: center; }
+.join-card .vinyl { margin: 0 auto 4px; }
+.join-card h1 { font-size: 1.25rem; }
+.join-card h1 span { color: var(--gold); letter-spacing: .15em; }
+.join-card label { text-align: left; font-size: .85rem; color: var(--cream-dim); }
+.join-card label input { margin-top: 6px; }
+.lbl { font-size: .8rem; color: var(--cream-dim); text-transform: uppercase; letter-spacing: .08em; }
+.err { color: var(--bad); font-size: .9rem; min-height: 1.2em; }
+
+.emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.emoji-grid button {
+  font-size: 1.5rem; padding: 10px 0; background: var(--ink-2); border-radius: 12px;
+  border: 2px solid transparent;
+}
+.emoji-grid button.sel { border-color: var(--gold); background: rgba(232,184,75,.12); }
+
+.me-chip {
+  align-self: flex-start; background: var(--ink-2); border-radius: 999px;
+  padding: 8px 16px; font-weight: 700; display: flex; gap: 8px; align-items: center;
+}
+#p-lobby h2 { font-size: 1.05rem; color: var(--cream-dim); font-weight: 500; }
+.lobby-list { list-style: none; display: grid; gap: 8px; }
+.lobby-list li { background: var(--ink-2); padding: 10px 14px; border-radius: 12px; display: flex; gap: 10px; }
+.lobby-list li .team-tag { margin-left: auto; color: var(--gold); font-size: .8rem; }
+.team-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.team-btns button.sel { border-color: var(--gold); color: var(--gold); }
+
+/* ---------- jogo ---------- */
+.p-head { display: flex; justify-content: space-between; align-items: center; }
+.stats { color: var(--gold); font-size: .95rem; }
+.g-status {
+  background: var(--ink-2); border-radius: 14px; padding: 14px 16px;
+  font-size: 1rem; min-height: 52px; display: flex; align-items: center;
+  border-left: 5px solid var(--gold);
+}
+.g-status.hot { border-left-color: var(--hot); }
+.g-status.ok { border-left-color: var(--ok); }
+
+.contest-btn {
+  background: radial-gradient(circle at 30% 25%, #FF7A8C, var(--hot) 70%);
+  color: #3A0712; border-radius: 26px; padding: 22px;
+  font-family: var(--font-display); font-weight: 900; font-size: 1.5rem;
+  display: flex; flex-direction: column; gap: 4px; align-items: center;
+  box-shadow: 0 10px 34px rgba(255,93,115,.35);
+}
+.contest-btn small { font-family: var(--font-body); font-weight: 600; font-size: .72rem; opacity: .85; }
+.contest-btn:not(:disabled) { animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.03); box-shadow: 0 10px 44px rgba(255,93,115,.55); } }
+
+.replay { align-self: center; }
+
+.placer { display: flex; flex-direction: column; gap: 12px; }
+.timeline {
+  display: flex; align-items: center; gap: 6px;
+  overflow-x: auto; padding: 12px 4px; -webkit-overflow-scrolling: touch;
+}
+.slot {
+  min-width: 46px; height: 92px; border-radius: 12px;
+  border: 2px dashed rgba(232,184,75,.5); background: rgba(232,184,75,.06);
+  color: var(--gold); font-size: 1.4rem; font-weight: 700; flex-shrink: 0;
+}
+.slot.sel { background: var(--gold); color: #2A1D07; border-style: solid; }
+.timeline .card45 { flex-shrink: 0; }
+
+.guesser { display: flex; flex-direction: column; gap: 10px; }
+.guess-actions { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+
+.p-reveal {
+  background: var(--ink-2); border-radius: 16px; padding: 18px; text-align: center;
+  border-top: 8px solid var(--dec, var(--gold));
+}
+.p-reveal .big-year { font-family: var(--font-num); font-size: 3rem; font-weight: 700; color: var(--dec, var(--gold)); }
+.p-reveal .verdict { font-weight: 700; margin-top: 6px; }
+.p-reveal .verdict.ok { color: var(--ok); }
+.p-reveal .verdict.bad { color: var(--bad); }
+.p-reveal .meta { color: var(--cream-dim); font-size: .85rem; margin-top: 4px; }
+
+.my-line { margin-top: auto; }
+.my-timeline { display: flex; gap: 8px; overflow-x: auto; padding: 10px 2px; }
+.my-timeline .card45 { flex-shrink: 0; }
+.my-timeline:empty::after { content: 'Sem cartas ainda'; color: var(--cream-dim); font-size: .85rem; }
+
+.p-foot { display: flex; flex-direction: column; gap: 10px; }
+.reactions { display: flex; gap: 8px; justify-content: center; }
+.reactions button { font-size: 1.4rem; background: var(--ink-2); border-radius: 12px; padding: 8px 12px; }
+.chat-form { display: flex; gap: 8px; }
+.chat-form button { padding: 0 18px; }
+
+#p-end { align-items: center; justify-content: center; text-align: center; }
+#end-msg { font-size: 1.6rem; }

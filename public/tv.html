@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hitster Digital, TV</title>
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/tv.css">
+</head>
+<body>
+
+<!-- ============ LOBBY ============ -->
+<section id="scr-lobby" class="screen">
+  <header class="tv-head">
+    <div class="brand"><span class="mini-vinyl" aria-hidden="true"></span> HITSTER <em>DIGITAL</em></div>
+    <div class="room-code num" id="lobby-code" title="Codigo da sala">-----</div>
+  </header>
+
+  <div class="lobby-grid">
+    <aside class="panel config">
+      <h2>Configuracao da partida</h2>
+
+      <label>Modo de jogo
+        <select id="cfg-modo">
+          <option value="ORIGINAL">Original: acerte a posicao</option>
+          <option value="PRO">PRO: posicao + artista + musica</option>
+          <option value="EXPERT">Expert: PRO + ano exato</option>
+          <option value="EQUIPES">Equipes: linha do tempo compartilhada</option>
+        </select>
+      </label>
+
+      <div class="row2">
+        <label>Meta de cartas <input id="cfg-meta" type="number" min="3" max="20" value="10"></label>
+        <label>Fichas iniciais <input id="cfg-fichas" type="number" min="0" max="10" value="2"></label>
+      </div>
+
+      <label>Fonte da musica
+        <select id="cfg-fonte">
+          <option value="PREVIEW">Trecho de 30s (sem login)</option>
+          <option value="SPOTIFY">Spotify (Premium, musica completa)</option>
+          <option value="YOUTUBE">YouTube</option>
+        </select>
+      </label>
+      <div id="fonte-status" class="fonte-status"></div>
+      <button id="btn-spotify" class="btn-ghost hidden">Conectar conta Spotify</button>
+
+      <div class="row2">
+        <label>Duracao do trecho (s) <input id="cfg-trecho" type="number" min="10" max="60" value="30"></label>
+        <label>Contestacoes por carta <input id="cfg-contest" type="number" min="1" max="7" value="3"></label>
+      </div>
+
+      <h3>Repertorio</h3>
+      <label>Origem
+        <select id="cfg-origem">
+          <option value="AMBAS">Brasileiras e internacionais</option>
+          <option value="BR">Somente brasileiras</option>
+          <option value="INTL">Somente internacionais</option>
+        </select>
+      </label>
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="cfg-bbus"> Ja esteve na Billboard Hot 100 (EUA)</label>
+        <label class="check"><input type="checkbox" id="cfg-bbbr"> Ja esteve no Top 100 Brasil</label>
+      </div>
+      <div class="row2">
+        <label>De <select id="cfg-dmin"></select></label>
+        <label>Ate <select id="cfg-dmax"></select></label>
+      </div>
+      <p class="deck-info num" id="deck-info"></p>
+    </aside>
+
+    <div class="panel qr-panel">
+      <h2>Escaneie para jogar</h2>
+      <div id="qrcode" aria-label="QR code para entrar na sala"></div>
+      <p class="join-url num" id="join-url"></p>
+      <p class="hint">Ate 8 jogadores, cada um no proprio celular.</p>
+    </div>
+
+    <aside class="panel players-panel">
+      <h2>Jogadores <span class="num" id="player-count">0/8</span></h2>
+      <ul id="lobby-players"></ul>
+      <div class="lobby-actions">
+        <button id="btn-lock" class="btn-ghost">Travar entradas</button>
+        <button id="btn-start" class="btn-gold">Iniciar partida</button>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ JOGO ============ -->
+<section id="scr-game" class="screen hidden">
+  <header class="tv-head slim">
+    <div class="brand"><span class="mini-vinyl" aria-hidden="true"></span> HITSTER <em>DIGITAL</em></div>
+    <div class="round-info"><span id="game-round" class="num"></span> <span id="deck-left" class="num"></span></div>
+    <div class="host-controls">
+      <button id="btn-pause" class="btn-ghost slim-btn">Pausar</button>
+      <button id="btn-skip" class="btn-ghost slim-btn">Pular rodada</button>
+      <button id="btn-endroom" class="btn-ghost slim-btn">Encerrar sala</button>
+    </div>
+  </header>
+
+  <div class="stage">
+    <div class="stage-main">
+      <div id="turn-banner" class="turn-banner"></div>
+      <div id="phase-status" class="phase-status"></div>
+      <div id="contest-strip" class="contest-strip"></div>
+
+      <!-- revelacao -->
+      <div id="reveal-panel" class="reveal-panel hidden">
+        <div class="reveal-card" id="reveal-card">
+          <div class="reveal-year num" id="reveal-year"></div>
+          <div class="reveal-title" id="reveal-title"></div>
+          <div class="reveal-artist" id="reveal-artist"></div>
+          <div class="reveal-composer" id="reveal-composer"></div>
+        </div>
+        <ul id="reveal-results" class="reveal-results"></ul>
+        <button id="btn-next" class="btn-gold">Proxima rodada</button>
+      </div>
+    </div>
+
+    <aside class="scoreboard" id="scoreboard"></aside>
+  </div>
+
+  <div id="chat-ticker" class="chat-ticker" aria-live="polite"></div>
+</section>
+
+<!-- ============ FIM ============ -->
+<section id="scr-end" class="screen hidden">
+  <h1 class="end-title">Fim de jogo</h1>
+  <div id="podium" class="podium"></div>
+  <div id="final-timelines" class="final-timelines"></div>
+  <div class="end-actions">
+    <button id="btn-rematch" class="btn-gold">Revanche na mesma sala</button>
+    <button id="btn-close" class="btn-ghost">Encerrar sala</button>
+  </div>
+</section>
+
+<!-- ============ TELA PRETA COM VINIL (durante a musica) ============ -->
+<div id="overlay-vinyl" class="overlay-vinyl hidden">
+  <div class="vinyl"></div>
+  <p class="listening" id="listening-label">Ouvindo...</p>
+  <div class="progress"><div id="progress-bar"></div></div>
+</div>
+
+<div id="pause-overlay" class="pause-overlay hidden">
+  <h2>Partida pausada</h2>
+  <button id="btn-resume" class="btn-gold">Retomar</button>
+</div>
+
+<div id="reactions-layer" aria-hidden="true"></div>
+<audio id="audio-preview"></audio>
+<div id="yt-holder" class="yt-holder"><div id="yt-player"></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/tv.js"></script>
+</body>
+</html>

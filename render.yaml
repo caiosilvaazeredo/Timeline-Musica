@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: hitster-digital
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: BASE_URL
+        sync: false        # ex: https://hitster-digital.onrender.com
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
+      - key: YT_API_KEY
+        sync: false

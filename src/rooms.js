@@ -349,6 +349,7 @@ function publicState(room) {
     code: room.code,
     state: room.state,
     locked: room.locked,
+    spotifyConnected: Boolean(room.spotifyConnected),
     config: room.config,
     roundNumber: room.round?.number || 0,
     phase: room.round?.phase || null,

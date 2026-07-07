@@ -45,11 +45,23 @@
 .fonte-status { font-size: .82rem; color: var(--cream-dim); margin: -6px 0 12px; }
 .fonte-status.ok { color: var(--ok); }
 .fonte-status.warn { color: var(--hot); }
+.spotify-login {
+  display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center;
+  background: var(--ink); border: 1px dashed rgba(30,215,96,.5);
+  border-radius: 14px; padding: 14px; margin-bottom: 14px;
+}
+.spotify-login p { font-size: .82rem; color: var(--cream-dim); }
+.spotify-login p b { color: #1ED760; }
+.spotify-login button { grid-column: 1 / -1; padding: 10px; font-size: .85rem; }
+#spotify-qr { background: var(--cream); padding: 8px; border-radius: 10px; width: fit-content; }
+#spotify-qr img, #spotify-qr canvas { display: block; }
 
 .qr-panel { text-align: center; display: flex; flex-direction: column; align-items: center; }
 #qrcode { background: var(--cream); padding: 16px; border-radius: 16px; margin: 8px 0 16px; }
 #qrcode img, #qrcode canvas { display: block; }
-.join-url { color: var(--gold); font-size: .95rem; word-break: break-all; }
+.join-steps { font-size: 1rem; line-height: 1.7; }
+.join-host { color: var(--gold); font-size: 1.3rem; font-weight: 700; }
+#join-code-inline { color: var(--gold); letter-spacing: .2em; font-size: 1.2rem; }
 .hint { color: var(--cream-dim); font-size: .85rem; margin-top: 10px; }
 
 .players-panel ul { list-style: none; display: grid; gap: 10px; margin-bottom: 18px; }

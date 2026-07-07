@@ -24,6 +24,13 @@
   padding: 8px 16px; font-weight: 700; display: flex; gap: 8px; align-items: center;
 }
 #p-lobby h2 { font-size: 1.05rem; color: var(--cream-dim); font-weight: 500; }
+.spotify-me {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: #1ED760; color: #0B2814; text-decoration: none;
+  font-weight: 700; padding: 14px; border-radius: var(--radius);
+}
+.spotify-me .sp-dot { width: 12px; height: 12px; border-radius: 50%; background: #0B2814; }
+.spotify-ok { color: var(--ok); font-weight: 600; }
 .lobby-list { list-style: none; display: grid; gap: 8px; }
 .lobby-list li { background: var(--ink-2); padding: 10px 14px; border-radius: 12px; display: flex; gap: 10px; }
 .lobby-list li .team-tag { margin-left: auto; color: var(--gold); font-size: .8rem; }

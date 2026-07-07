@@ -14,7 +14,7 @@ let playTimer = null, progressTimer = null;
 const savedCode = sessionStorage.getItem('hitster_tv_room');
 if (savedCode) {
   socket.emit('tv:reclaim', { code: savedCode }, (res) => {
-    if (res?.ok) bootRoom(savedCode, res.joinUrl, res.state);
+    if (res?.ok) bootRoom(savedCode, res, res.state);
     else createRoom();
   });
 } else createRoom();
@@ -22,15 +22,16 @@ if (savedCode) {
 function createRoom() {
   socket.emit('tv:create', (res) => {
     sessionStorage.setItem('hitster_tv_room', res.code);
-    bootRoom(res.code, res.joinUrl, res.state);
+    bootRoom(res.code, res, res.state);
   });
 }
 
-function bootRoom(code, joinUrl, state) {
+function bootRoom(code, res, state) {
   ROOM = code;
   $('#lobby-code').textContent = code;
-  $('#join-url').textContent = joinUrl;
-  new QRCode($('#qrcode'), { text: joinUrl, width: 220, height: 220, colorDark: '#1B1226', colorLight: '#F4E8CF' });
+  $('#join-host').textContent = res.joinHost || location.host;
+  $('#join-code-inline').textContent = code;
+  new QRCode($('#qrcode'), { text: res.joinUrl, width: 220, height: 220, colorDark: '#1B1226', colorLight: '#F4E8CF' });
   render(state);
   loadFeatures();
   loadDeckStats();
@@ -76,19 +77,34 @@ function pushConfig() {
 ['#cfg-modo','#cfg-meta','#cfg-fichas','#cfg-fonte','#cfg-trecho','#cfg-contest','#cfg-origem','#cfg-bbus','#cfg-bbbr','#cfg-dmin','#cfg-dmax']
   .forEach(sel => $(sel).addEventListener('change', pushConfig));
 
+let spotifyQrDrawn = false;
 function updateFonteStatus() {
   const fonte = $('#cfg-fonte').value;
   const el = $('#fonte-status');
-  const btn = $('#btn-spotify');
-  btn.classList.add('hidden');
+  const loginBox = $('#spotify-login');
+  loginBox.classList.add('hidden');
   el.className = 'fonte-status';
+  const connected = spotifyReady || STATE?.spotifyConnected;
   if (fonte === 'PREVIEW') {
     el.textContent = 'Pronto: trechos de 30 segundos via Deezer, nenhum login necessario.';
     el.classList.add('ok');
   } else if (fonte === 'SPOTIFY') {
     if (!FEATURES.spotify) { el.textContent = 'Configure SPOTIFY_CLIENT_ID e SPOTIFY_CLIENT_SECRET no servidor.'; el.classList.add('warn'); }
-    else if (spotifyReady) { el.textContent = 'Spotify conectado e pronto para tocar.'; el.classList.add('ok'); }
-    else { el.textContent = 'Um jogador com Spotify Premium precisa conectar a conta antes de comecar.'; el.classList.add('warn'); btn.classList.remove('hidden'); }
+    else if (connected) {
+      el.textContent = 'Spotify conectado e pronto para tocar.'; el.classList.add('ok');
+      if (STATE?.spotifyConnected && !spotifyReady) initSpotifySDK();
+    }
+    else {
+      el.textContent = 'Conecte o Spotify de um jogador antes de comecar:'; el.classList.add('warn');
+      loginBox.classList.remove('hidden');
+      if (!spotifyQrDrawn) {
+        new QRCode($('#spotify-qr'), {
+          text: `${location.origin}/auth/spotify?sala=${ROOM}`,
+          width: 120, height: 120, colorDark: '#1B1226', colorLight: '#F4E8CF'
+        });
+        spotifyQrDrawn = true;
+      }
+    }
   } else if (fonte === 'YOUTUBE') {
     if (!FEATURES.youtube) { el.textContent = 'Configure YT_API_KEY no servidor para usar o YouTube.'; el.classList.add('warn'); }
     else { el.textContent = 'YouTube pronto. O audio toca direto na TV, sem login.'; el.classList.add('ok'); ensureYouTube(); }
@@ -111,7 +127,10 @@ $('#btn-lock').addEventListener('click', () => {
 });
 $('#btn-start').addEventListener('click', () => {
   const fonte = $('#cfg-fonte').value;
-  if (fonte === 'SPOTIFY' && !spotifyReady) return toast('Conecte o Spotify de um jogador antes de comecar.');
+  if (fonte === 'SPOTIFY' && !spotifyReady && !STATE?.spotifyConnected) {
+    return toast('Conecte o Spotify de um jogador antes de comecar (QR na configuracao).');
+  }
+  if (fonte === 'SPOTIFY' && !spotifyReady) initSpotifySDK();
   socket.emit('tv:start', (res) => { if (res?.error) toast(res.error); });
 });
 
@@ -241,6 +260,7 @@ function render(state) {
     ul.appendChild(li);
   });
   ul.querySelectorAll('.kick').forEach(b => b.addEventListener('click', () => socket.emit('tv:kick', { playerId: b.dataset.id })));
+  if (state.state === 'lobby') updateFonteStatus();
 
   // pausa
   $('#pause-overlay').classList.toggle('hidden', state.state !== 'paused');

@@ -42,7 +42,11 @@
         </select>
       </label>
       <div id="fonte-status" class="fonte-status"></div>
-      <button id="btn-spotify" class="btn-ghost hidden">Conectar conta Spotify</button>
+      <div id="spotify-login" class="spotify-login hidden">
+        <div id="spotify-qr" aria-label="QR code para conectar o Spotify"></div>
+        <p>Um jogador com Spotify <b>Premium</b> escaneia com o celular e loga na conta dele, direto na tela oficial do Spotify.</p>
+        <button id="btn-spotify" class="btn-ghost">Ou conectar aqui na TV</button>
+      </div>
 
       <div class="row2">
         <label>Duracao do trecho (s) <input id="cfg-trecho" type="number" min="10" max="60" value="30"></label>
@@ -69,10 +73,12 @@
     </aside>
 
     <div class="panel qr-panel">
-      <h2>Escaneie para jogar</h2>
+      <h2>Como entrar</h2>
       <div id="qrcode" aria-label="QR code para entrar na sala"></div>
-      <p class="join-url num" id="join-url"></p>
-      <p class="hint">Ate 8 jogadores, cada um no proprio celular.</p>
+      <p class="join-steps">Escaneie o QR ou acesse<br>
+        <span class="join-host num" id="join-host"></span><br>
+        e digite o codigo <b class="num" id="join-code-inline"></b></p>
+      <p class="hint">Ate 8 jogadores, cada um no proprio celular, em qualquer rede.</p>
     </div>
 
     <aside class="panel players-panel">

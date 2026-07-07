@@ -86,6 +86,10 @@ function render(state) {
 
   if (state.state === 'lobby') {
     show('#team-picker', state.config.modo === 'EQUIPES');
+    const wantsSpotify = state.config.fonte === 'SPOTIFY';
+    show('#btn-spotify-me', wantsSpotify && !state.spotifyConnected);
+    show('#spotify-ok', wantsSpotify && state.spotifyConnected);
+    $('#btn-spotify-me').href = `/auth/spotify?sala=${CODE}`;
     const ul = $('#lobby-list');
     ul.innerHTML = '';
     state.players.forEach(x => {

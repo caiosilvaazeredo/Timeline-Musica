@@ -14,6 +14,9 @@ const io = new Server(server, { cors: { origin: '*' } });
 
 const PORT = process.env.PORT || 3000;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+// Dominio curto opcional para os jogadores (equivalente ao kahoot.it).
+// Ex: JOIN_URL=https://hitster.page aponta para o mesmo servico via dominio customizado.
+const JOIN_URL = process.env.JOIN_URL || BASE_URL;
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID || '';
 const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET || '';
 const YT_API_KEY = process.env.YT_API_KEY || '';
@@ -23,6 +26,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/play', (req, res) => res.sendFile(path.join(__dirname, 'public', 'player.html')));
 app.get('/tv', (req, res) => res.sendFile(path.join(__dirname, 'public', 'tv.html')));
+
+// Atalho estilo Kahoot: digitar site.com/AB123 entra direto na sala
+app.get('/:code([A-Za-z0-9]{4,6})', (req, res) => {
+  res.redirect(`/play?sala=${req.params.code.toUpperCase()}`);
+});
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.get('/api/songs/stats', (req, res) => res.json(stats()));
@@ -74,8 +82,16 @@ app.get('/auth/spotify/callback', async (req, res) => {
         expires_at: Date.now() + (data.expires_in - 60) * 1000
       });
       const room = engine.getRoom(state);
-      if (room) io.to(room.tvSocketId).emit('spotify:connected');
-      return res.send('<body style="background:#0F0D16;color:#F5EFE0;font-family:sans-serif;display:grid;place-items:center;height:100vh"><h2>Spotify conectado. Volte para a TV.</h2></body>');
+      if (room) {
+        room.spotifyConnected = true;
+        io.to(room.tvSocketId).emit('spotify:connected');
+        broadcast(room);
+      }
+      return res.send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Spotify conectado</title></head>
+<body style="background:#1B1226;color:#F4E8CF;font-family:sans-serif;display:grid;place-items:center;min-height:100vh;text-align:center;padding:24px">
+<div><div style="font-size:64px">✅</div><h2 style="margin:12px 0">Spotify conectado!</h2>
+<p style="opacity:.7">A TV ja esta pronta para tocar as musicas completas.<br>Pode fechar esta aba e voltar para o jogo.</p></div>
+</body></html>`);
     }
     throw new Error(JSON.stringify(data));
   } catch (e) {
@@ -231,7 +247,7 @@ io.on('connection', (socket) => {
     socket.join(room.code);
     socket.data.roomCode = room.code;
     socket.data.isTV = true;
-    cb?.({ code: room.code, joinUrl: `${BASE_URL}/play?sala=${room.code}`, state: engine.publicState(room) });
+    cb?.({ code: room.code, joinUrl: `${JOIN_URL}/${room.code}`, joinHost: JOIN_URL.replace(/^https?:\/\//, ""), state: engine.publicState(room) });
   });
 
   socket.on('tv:config', ({ config }, cb) => {
@@ -443,7 +459,7 @@ io.on('connection', (socket) => {
     socket.join(room.code);
     socket.data.roomCode = room.code;
     socket.data.isTV = true;
-    cb?.({ ok: true, state: engine.publicState(room), joinUrl: `${BASE_URL}/play?sala=${room.code}` });
+    cb?.({ ok: true, state: engine.publicState(room), joinUrl: `${JOIN_URL}/${room.code}`, joinHost: JOIN_URL.replace(/^https?:\/\//, "") });
   });
 });
 

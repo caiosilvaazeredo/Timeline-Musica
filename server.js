@@ -215,16 +215,28 @@ async function resolveSong(fonte, song, roomCode) {
 
 // ---------------- Socket.io ----------------
 
-// Presets do menu inicial: festa rapida sem login, pronta para a TV da sala
-function quickPreset(origem) {
+// Presets do menu inicial: festas prontas sem login e sem tela de configuracao.
+// Cada card do menu chama um destes ids diretamente.
+const QUICK_PRESETS = {
+  FESTA:   { modo: 'ORIGINAL', origem: 'AMBAS' },
+  BR:      { modo: 'ORIGINAL', origem: 'BR' },
+  INTL:    { modo: 'ORIGINAL', origem: 'INTL' },
+  PRO:     { modo: 'PRO',      origem: 'AMBAS' },
+  EXPERT:  { modo: 'EXPERT',   origem: 'AMBAS' },
+  EQUIPES: { modo: 'EQUIPES',  origem: 'AMBAS' }
+};
+
+function quickPreset(id) {
+  // compatibilidade com valores antigos (true/'MISTA' == festa mista padrao)
+  const p = QUICK_PRESETS[id] || QUICK_PRESETS.FESTA;
   return {
-    modo: 'ORIGINAL',
+    modo: p.modo,
     meta: 8,
-    fichasIniciais: 3,
+    fichasIniciais: p.modo === 'PRO' ? 5 : 3,
     fonte: 'PREVIEW',
     duracaoTrechoSeg: 60,
     maxContestacoes: 3,
-    filtros: { origem, billboardUS: false, billboardBR: false, decadaMin: 1950, decadaMax: 2020 }
+    filtros: { origem: p.origem, billboardUS: false, billboardBR: false, decadaMin: 1950, decadaMax: 2020 }
   };
 }
 
@@ -290,8 +302,7 @@ io.on('connection', (socket) => {
     const room = engine.createRoom(socket.id);
     room.visibility = visibility === 'public' ? 'public' : 'private';
     if (quick) {
-      const origem = quick === 'BR' ? 'BR' : 'AMBAS';   // 'BR' | 'MISTA' | true (compat)
-      const preset = quickPreset(origem);
+      const preset = quickPreset(quick === true ? 'FESTA' : quick);
       room.config = { ...room.config, ...preset, filtros: { ...preset.filtros } };
     }
     socket.join(room.code);

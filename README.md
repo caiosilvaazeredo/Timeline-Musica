@@ -4,11 +4,17 @@ Jogo de festa multiplayer de linha do tempo musical (inspirado no classico Hitst
 
 ## Como comecar
 
-Ao abrir `/tv`, o host escolhe entre:
+Ao abrir `/tv`, o host escolhe entre 6 presets prontos (sem login, sem tela de configuracao) ou personaliza tudo:
 
-- **Festa Rapida**: brasileiras + internacionais, sem login e sem configuracao. Preset equilibrado (Original, meta 8, trecho de 30s via Deezer) com o QR na tela em segundos.
-- **Festa Brasileira**: mesmo preset, so com musicas brasileiras.
-- **Sala Personalizada**: o painel completo de modo, fonte de musica, repertorio e regras.
+- **Festa Rapida**: brasileiras + internacionais, modo Original.
+- **Festa Brasileira**: so musicas brasileiras.
+- **Festa Internacional**: so musicas de fora.
+- **Modo PRO**: so mantem a carta acertando posicao, artista e musica.
+- **Modo Expert**: PRO + ano exato.
+- **Modo Equipes**: linha do tempo e fichas compartilhadas entre times.
+- **Sala Personalizada**: painel completo de modo, fonte de musica, repertorio e regras.
+
+Qualquer uma das opcoes prontas ja sobe com trecho de 1 minuto e QR na tela em segundos. Um botao "🏠 Menu" no lobby, na partida e na tela de fim de jogo encerra a sala atual e volta para a escolha de modo; no celular, o mesmo botao aparece na entrada e no lobby do jogador.
 
 Em qualquer um dos dois, a sala pode ser **privada** (so quem tem o codigo entra) ou **publica** (aparece na lista de salas abertas da pagina inicial, estilo Gartic, para qualquer visitante entrar sem digitar codigo). O host alterna isso a qualquer momento no lobby pelo botao de visibilidade.
 

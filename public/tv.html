@@ -17,15 +17,35 @@
     <p class="mc-sub">Como voce quer comecar?</p>
 
     <div class="mc-cards">
-      <button id="mc-quick-mista" class="mc-card mc-quick" data-quick="MISTA">
+      <button class="mc-card mc-quick" data-quick="FESTA">
         <span class="mc-icon">🎉</span>
         <span class="mc-name">Festa Rapida</span>
-        <span class="mc-desc">Brasileiras + internacionais. Sem login, sem ajustes: QR na tela em segundos.</span>
+        <span class="mc-desc">Brasileiras + internacionais. Sem login, sem ajustes.</span>
       </button>
-      <button id="mc-quick-br" class="mc-card mc-quick" data-quick="BR">
+      <button class="mc-card mc-quick" data-quick="BR">
         <span class="mc-icon">🇧🇷</span>
         <span class="mc-name">Festa Brasileira</span>
-        <span class="mc-desc">So musicas brasileiras, de Pixinguinha ao funk. Pronta na hora.</span>
+        <span class="mc-desc">So musicas brasileiras, de Pixinguinha ao funk.</span>
+      </button>
+      <button class="mc-card mc-quick" data-quick="INTL">
+        <span class="mc-icon">🌎</span>
+        <span class="mc-name">Festa Internacional</span>
+        <span class="mc-desc">So musicas de fora, dos anos 50 a hoje.</span>
+      </button>
+      <button class="mc-card mc-quick" data-quick="PRO">
+        <span class="mc-icon">🏆</span>
+        <span class="mc-name">Modo PRO</span>
+        <span class="mc-desc">Vale a carta so acertando posicao, artista e musica.</span>
+      </button>
+      <button class="mc-card mc-quick" data-quick="EXPERT">
+        <span class="mc-icon">🎓</span>
+        <span class="mc-name">Modo Expert</span>
+        <span class="mc-desc">PRO + ano exato. Para quem manja mesmo de musica.</span>
+      </button>
+      <button class="mc-card mc-quick" data-quick="EQUIPES">
+        <span class="mc-icon">👥</span>
+        <span class="mc-name">Modo Equipes</span>
+        <span class="mc-desc">Linha do tempo e fichas compartilhadas entre times.</span>
       </button>
       <button id="mc-custom" class="mc-card mc-custom">
         <span class="mc-icon">🎛️</span>
@@ -46,6 +66,7 @@
   <header class="tv-head">
     <div class="brand"><span class="mini-vinyl" aria-hidden="true"></span> VITROLA</div>
     <div class="head-right">
+      <button id="btn-home-lobby" class="home-btn" title="Voltar ao menu inicial">🏠 Menu</button>
       <button id="vis-toggle" class="vis-pill" title="Alternar sala publica ou privada"></button>
       <div class="room-code num" id="lobby-code" title="Codigo da sala">-----</div>
     </div>
@@ -147,6 +168,7 @@
     <div class="brand"><span class="mini-vinyl" aria-hidden="true"></span> VITROLA</div>
     <div class="round-info"><span id="game-round" class="num"></span> <span id="deck-left" class="num"></span></div>
     <div class="host-controls">
+      <button id="btn-home-game" class="home-btn" title="Voltar ao menu inicial">🏠</button>
       <button id="btn-pause" class="btn-ghost slim-btn">Pausar</button>
       <button id="btn-skip" class="btn-ghost slim-btn">Pular rodada</button>
       <button id="btn-endroom" class="btn-ghost slim-btn">Encerrar sala</button>
@@ -195,6 +217,7 @@
   <div class="end-actions">
     <button id="btn-rematch" class="btn-gold">Revanche na mesma sala</button>
     <button id="btn-close" class="btn-ghost">Encerrar sala</button>
+    <button id="btn-home-end" class="btn-ghost">🏠 Menu inicial</button>
   </div>
 </section>
 

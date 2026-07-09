@@ -21,12 +21,16 @@
     <div id="emoji-grid" class="emoji-grid"></div>
     <button id="btn-join" class="btn-gold">Entrar no jogo</button>
     <p id="join-error" class="err"></p>
+    <a href="/" class="back-home">🏠 Trocar de sala</a>
   </div>
 </section>
 
 <!-- ============ LOBBY ============ -->
 <section id="p-lobby" class="pscreen hidden">
-  <div class="me-chip"><span id="me-emoji"></span> <span id="me-name"></span></div>
+  <div class="lobby-top">
+    <div class="me-chip"><span id="me-emoji"></span> <span id="me-name"></span></div>
+    <button id="btn-leave-lobby" class="back-home-btn" title="Sair e trocar de sala">🏠 Sair</button>
+  </div>
   <h2>Aguardando o host iniciar...</h2>
   <a id="btn-spotify-me" class="spotify-me hidden" target="_blank" rel="noopener">
     <span class="sp-dot"></span> Conectar meu Spotify para a partida

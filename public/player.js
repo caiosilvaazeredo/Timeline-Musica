@@ -29,7 +29,7 @@ EMOJIS.forEach((e, i) => {
   grid.appendChild(b);
 });
 
-const saved = JSON.parse(localStorage.getItem(`vitrola_${CODE}`) || 'null');
+const saved = JSON.parse(sessionStorage.getItem(`vitrola_${CODE}`) || 'null');
 if (saved?.token) join(saved.name, saved.emoji, saved.token);
 
 $('#btn-join').addEventListener('click', () => {
@@ -43,7 +43,7 @@ function join(name, emoji, token) {
   socket.emit('player:join', { code: CODE, name, emoji, token }, (res) => {
     if (res?.error) { $('#join-error').textContent = res.error; return; }
     ME = { playerId: res.playerId, token: res.token, name, emoji };
-    localStorage.setItem(`vitrola_${CODE}`, JSON.stringify({ token: res.token, name, emoji }));
+    sessionStorage.setItem(`vitrola_${CODE}`, JSON.stringify({ token: res.token, name, emoji }));
     ['#me-emoji', '#g-emoji'].forEach(s => $(s).textContent = emoji);
     ['#me-name', '#g-name'].forEach(s => $(s).textContent = name);
     render(res.state);
@@ -53,6 +53,14 @@ function join(name, emoji, token) {
 // reconexao do socket
 socket.on('connect', () => {
   if (ME) socket.emit('player:join', { code: CODE, token: ME.token }, (res) => { if (res?.ok) render(res.state); });
+});
+
+// sair do lobby e voltar ao menu inicial (so antes da partida comecar)
+$('#btn-leave-lobby').addEventListener('click', () => {
+  if (confirm('Sair desta sala e voltar ao menu inicial?')) {
+    sessionStorage.removeItem(`vitrola_${CODE}`);
+    location.href = '/';
+  }
 });
 
 // ---------------- equipes ----------------
@@ -202,8 +210,8 @@ socket.on('guess:open', () => { if (STATE) openGuesser(STATE); });
 
 socket.on('round:reveal', showReveal);
 
-socket.on('kicked', () => { localStorage.removeItem(`vitrola_${CODE}`); alert('Voce foi removido da sala.'); location.href = '/'; });
-socket.on('room:closed', () => { localStorage.removeItem(`vitrola_${CODE}`); location.href = '/'; });
+socket.on('kicked', () => { sessionStorage.removeItem(`vitrola_${CODE}`); alert('Voce foi removido da sala.'); location.href = '/'; });
+socket.on('room:closed', () => { sessionStorage.removeItem(`vitrola_${CODE}`); location.href = '/'; });
 
 // ---------------- posicionamento ----------------
 function openPlacer(mode, label) {

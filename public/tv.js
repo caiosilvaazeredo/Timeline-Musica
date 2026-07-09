@@ -191,6 +191,14 @@ $('#btn-resume').addEventListener('click', () => socket.emit('tv:resume'));
 $('#btn-skip').addEventListener('click', () => { stopAudio(); socket.emit('tv:skip'); });
 $('#btn-next').addEventListener('click', () => socket.emit('tv:next-round'));
 $('#btn-endroom').addEventListener('click', () => { if (confirm('Encerrar a sala para todos?')) socket.emit('tv:end'); });
+
+// voltar ao menu inicial: encerra a sala atual e volta pra tela de escolha de modo
+function goHome() {
+  if (confirm('Voltar ao menu inicial? Isso encerra a sala atual para todos.')) socket.emit('tv:end');
+}
+$('#btn-home-lobby').addEventListener('click', goHome);
+$('#btn-home-game').addEventListener('click', goHome);
+$('#btn-home-end').addEventListener('click', goHome);
 $('#btn-rematch').addEventListener('click', () => socket.emit('tv:rematch'));
 $('#btn-close').addEventListener('click', () => socket.emit('tv:end'));
 

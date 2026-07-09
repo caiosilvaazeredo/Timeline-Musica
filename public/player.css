@@ -117,3 +117,9 @@
 .start-round small { font-family: var(--font-body); font-weight: 600; font-size: .72rem; opacity: .85; }
 
 .hurry { align-self: center; border-color: var(--hot); color: var(--hot); animation: pop .3s ease; }
+
+/* voltar ao menu inicial / trocar de sala (celular) */
+.back-home { display: block; text-align: center; color: var(--cream-dim); font-size: .85rem; margin-top: 14px; text-decoration: none; }
+.back-home:hover { color: var(--gold); }
+.lobby-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.back-home-btn { background: transparent; border: 2px solid rgba(244,232,207,.3); color: var(--cream-dim); padding: 8px 12px; font-size: .8rem; border-radius: 10px; }

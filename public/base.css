@@ -1,19 +1,22 @@
-/* Hitster Digital: tokens compartilhados TV + celular
+/* Vitrola: tokens compartilhados TV + celular
    Direcao visual: jukebox de sala de estar. Fundo ameixa profundo, dourado de selo
    de disco de 45 rpm, e cartas coloridas por decada (assinatura do jogo). */
 
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Outfit:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
 
-:root {
-  --ink: #1B1226;          /* ameixa profunda */
-  --ink-2: #251A33;
-  --cream: #F4E8CF;        /* selo de disco */
-  --cream-dim: #C9BCA2;
-  --gold: #E8B84B;
-  --gold-deep: #B8892E;
+:root, [data-theme="vitrola"] {
+  /* Vitrola: ameixa profunda + ouro de selo de 45rpm (paleta refinada) */
+  --ink: #191024;
+  --ink-2: #261A38;
+  --ink-3: #33244A;        /* superficie elevada */
+  --cream: #F6ECD4;
+  --cream-dim: #B9AA8F;
+  --gold: #F0BE4E;
+  --gold-deep: #C08F2C;
   --hot: #FF5D73;          /* alerta / contestacao */
-  --ok: #5DDE8F;
+  --ok: #52E09A;
   --bad: #FF6B6B;
+  --glow: rgba(240,190,78,.16);
 
   /* decadas (assinatura: cada carta ganha a cor da sua decada) */
   --d1930: #8C7B6B; --d1940: #A98F5F; --d1950: #3FB8AF;
@@ -21,6 +24,69 @@
   --d1990: #4E7DE0; --d2000: #55B84E; --d2010: #8E5BD8; --d2020: #E0483F;
 
   --radius: 18px;
+}
+
+[data-theme="neon"] {
+  /* Neon de madrugada: azul-noite + ciano e rosa de letreiro */
+  --ink: #0A0E1E;
+  --ink-2: #131A33;
+  --ink-3: #1C2547;
+  --cream: #EAF4FF;
+  --cream-dim: #8FA3C7;
+  --gold: #37E6E6;
+  --gold-deep: #1FA8B8;
+  --hot: #FF4D9D;
+  --ok: #4DFFA6;
+  --bad: #FF5470;
+  --glow: rgba(55,230,230,.18);
+}
+
+[data-theme="tropical"] {
+  /* Tropical: verde-mata + laranja quente e amarelo sol */
+  --ink: #0D1F16;
+  --ink-2: #162E20;
+  --ink-3: #1F3D2B;
+  --cream: #F7F1DC;
+  --cream-dim: #A8B399;
+  --gold: #FFB238;
+  --gold-deep: #D98B12;
+  --hot: #FF6B4A;
+  --ok: #6BE585;
+  --bad: #FF7059;
+  --glow: rgba(255,178,56,.16);
+}
+
+[data-theme="retro"] {
+  /* Retro claro: papel creme + tinta cafe e vermelho de jukebox */
+  --ink: #F1E7D0;
+  --ink-2: #FBF4E4;
+  --ink-3: #FFFDF6;
+  --cream: #33241A;
+  --cream-dim: #82705C;
+  --gold: #C2481F;
+  --gold-deep: #93300F;
+  --hot: #D93654;
+  --ok: #1E9E62;
+  --bad: #C22F2F;
+  --glow: rgba(194,72,31,.12);
+}
+
+[data-theme="meianoite"] {
+  /* Meia-noite rubra: preto absoluto + rubi e prata */
+  --ink: #0C0A0D;
+  --ink-2: #191419;
+  --ink-3: #241C24;
+  --cream: #EFE9EC;
+  --cream-dim: #9B8F97;
+  --gold: #E8394F;
+  --gold-deep: #A31F32;
+  --hot: #FF9F1C;
+  --ok: #4CD9A0;
+  --bad: #FF5C5C;
+  --glow: rgba(232,57,79,.18);
+}
+
+:root {
   --font-display: 'Unbounded', sans-serif;
   --font-body: 'Outfit', sans-serif;
   --font-num: 'Space Grotesk', monospace;
@@ -29,10 +95,14 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
 body {
-  background: var(--ink);
+  background:
+    radial-gradient(1200px 700px at 80% -10%, var(--glow), transparent 60%),
+    radial-gradient(900px 600px at -10% 110%, var(--glow), transparent 55%),
+    var(--ink);
   color: var(--cream);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+  transition: background .5s ease, color .5s ease;
 }
 
 h1, h2, h3, .display { font-family: var(--font-display); letter-spacing: .01em; }
@@ -53,7 +123,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   outline-offset: 2px;
 }
 
-.btn-gold { background: var(--gold); color: #2A1D07; padding: 14px 28px; font-size: 1.05rem; }
+.btn-gold { background: var(--gold); color: var(--ink); padding: 14px 28px; font-size: 1.05rem; }
 .btn-ghost { background: transparent; color: var(--cream); border: 2px solid rgba(244,232,207,.35); padding: 12px 24px; }
 .btn-hot { background: var(--hot); color: #3A0712; padding: 14px 28px; }
 
@@ -81,7 +151,7 @@ input, select {
   animation: spin 2.2s linear infinite;
 }
 .vinyl::before { /* selo central dourado com o logo */
-  content: 'HITSTER\ADIGITAL';
+  content: 'VITROLA';
   white-space: pre;
   position: absolute; inset: 27%;
   border-radius: 50%;
@@ -91,7 +161,7 @@ input, select {
   text-align: center;
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: calc(var(--size) * .052);
+  font-size: calc(var(--size) * .066);
   line-height: 1.25;
 }
 .vinyl::after { /* furo central */
@@ -130,3 +200,71 @@ input, select {
   box-shadow: 0 10px 30px rgba(0,0,0,.5);
 }
 .hidden { display: none !important; }
+
+
+/* ================= efeitos de acao (fx) ================= */
+#fx-flash {
+  position: fixed; inset: 0; pointer-events: none; z-index: 300; opacity: 0;
+}
+#fx-flash.on { animation: fxFlash .5s ease-out; }
+@keyframes fxFlash { 0% { opacity: .9; } 100% { opacity: 0; } }
+
+.fx-shake { animation: fxShake .55s cubic-bezier(.36,.07,.19,.97); }
+@keyframes fxShake {
+  10%, 90% { transform: translate(-6px, 2px); }
+  20%, 80% { transform: translate(9px, -3px); }
+  30%, 50%, 70% { transform: translate(-11px, 4px); }
+  40%, 60% { transform: translate(11px, -4px); }
+}
+
+.fx-zoom-pulse { animation: fxZoom .45s ease; }
+@keyframes fxZoom { 40% { transform: scale(1.12); } }
+
+.confetti-piece {
+  position: fixed; top: -24px; z-index: 310; pointer-events: none;
+  width: 10px; height: 16px; border-radius: 2px;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  to { transform: translateY(112vh) rotate(760deg); opacity: .9; }
+}
+
+/* entrada dramatica da carta na revelacao */
+.flip-in { animation: flipIn .65s cubic-bezier(.2,.9,.3,1.2); transform-style: preserve-3d; }
+@keyframes flipIn {
+  0% { transform: perspective(900px) rotateY(95deg) scale(.7); opacity: 0; }
+  60% { transform: perspective(900px) rotateY(-12deg) scale(1.04); opacity: 1; }
+  100% { transform: perspective(900px) rotateY(0) scale(1); }
+}
+
+/* banner de vez: entrada em slide com brilho */
+.slide-pop { animation: slidePop .55s cubic-bezier(.2,.9,.3,1.15); }
+@keyframes slidePop {
+  0% { transform: translateY(30px) scale(.85); opacity: 0; }
+  70% { transform: translateY(-4px) scale(1.03); }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* agulha arranhando o disco quando a musica e cortada */
+.vinyl.scratch { animation: scratch .55s ease forwards; }
+@keyframes scratch {
+  0% { transform: rotate(0); }
+  25% { transform: rotate(-32deg); }
+  55% { transform: rotate(14deg); }
+  80% { transform: rotate(-7deg); }
+  100% { transform: rotate(0); filter: brightness(1.3); }
+}
+
+/* onda de choque no botao de contestar */
+.fx-ring { position: relative; overflow: visible; }
+.fx-ring::after {
+  content: ''; position: absolute; inset: -4px; border-radius: inherit;
+  border: 3px solid var(--hot); opacity: 0; pointer-events: none;
+}
+.fx-ring.fired::after { animation: ring .6s ease-out; }
+@keyframes ring { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.35); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-shake, .fx-zoom-pulse, .flip-in, .slide-pop, .vinyl.scratch { animation: none !important; }
+  .confetti-piece { display: none; }
+}

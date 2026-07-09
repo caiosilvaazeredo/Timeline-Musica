@@ -1,4 +1,4 @@
-// Hitster Digital: servidor Express + Socket.io
+// Vitrola: servidor Express + Socket.io
 // TV cria a sala e toca a musica; jogadores entram pelo QR code no celular.
 try { require('dotenv').config(); } catch { /* opcional: no Render as variaveis vem do ambiente */ }
 const path = require('path');
@@ -15,7 +15,7 @@ const io = new Server(server, { cors: { origin: '*' } });
 const PORT = process.env.PORT || 3000;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 // Dominio curto opcional para os jogadores (equivalente ao kahoot.it).
-// Ex: JOIN_URL=https://hitster.page aponta para o mesmo servico via dominio customizado.
+// Ex: JOIN_URL=https://vitrola.page aponta para o mesmo servico via dominio customizado.
 const JOIN_URL = process.env.JOIN_URL || BASE_URL;
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID || '';
 const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET || '';
@@ -224,6 +224,7 @@ function closeContestAndGuess(room) {
 function openGuessing(room) {
   if (!room.round) return;
   room.round.phase = 'guessing';
+  if (engine.allEligibleGuessed(room)) return doReveal(room); // ex: jogador da vez respondeu cedo e ninguem contestou
   io.to(room.code).emit('guess:open', { seconds: engine.GUESS_WINDOW_MS / 1000, modo: room.config.modo });
   broadcast(room);
   room.timers.guess = setTimeout(() => doReveal(room), engine.GUESS_WINDOW_MS);
@@ -404,6 +405,12 @@ io.on('connection', (socket) => {
     if (!room) return;
     const r = engine.submitGuess(room, socket.data.playerId, guess || {});
     cb?.(r);
+    if (r.ok) {
+      // jogador da vez respondeu: corta a musica na TV (dificulta contestacoes)
+      if (r.stopMusic) io.to(room.tvSocketId).emit('playback:stop');
+      // se todos os elegiveis ja palpitaram na janela de palpites, revela na hora
+      if (room.round?.phase === 'guessing' && engine.allEligibleGuessed(room)) doReveal(room);
+    }
   });
 
   socket.on('player:skip-guess', () => {
@@ -464,5 +471,5 @@ io.on('connection', (socket) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Hitster Digital rodando em ${BASE_URL}`);
+  console.log(`Vitrola rodando em ${BASE_URL}`);
 });

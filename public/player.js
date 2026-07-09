@@ -1,4 +1,4 @@
-/* Hitster Digital, celular do jogador */
+/* Vitrola, celular do jogador */
 const socket = io();
 const $ = (s) => document.querySelector(s);
 const decColor = (y) => `var(--d${Math.min(2020, Math.max(1930, Math.floor(y / 10) * 10))})`;
@@ -12,6 +12,7 @@ let selectedSlot = null;
 let placingAs = null;      // 'turn' | 'contest' | null
 let iContested = false;
 let iPlacedContest = false;
+let iGuessed = false;
 
 // ---------------- entrada ----------------
 const EMOJIS = ['🎸','🎤','🎧','🥁','🎺','🎻','🪩','📻','🎹','🎷','🕺','💃'];
@@ -28,7 +29,7 @@ EMOJIS.forEach((e, i) => {
   grid.appendChild(b);
 });
 
-const saved = JSON.parse(localStorage.getItem(`hitster_${CODE}`) || 'null');
+const saved = JSON.parse(localStorage.getItem(`vitrola_${CODE}`) || 'null');
 if (saved?.token) join(saved.name, saved.emoji, saved.token);
 
 $('#btn-join').addEventListener('click', () => {
@@ -42,7 +43,7 @@ function join(name, emoji, token) {
   socket.emit('player:join', { code: CODE, name, emoji, token }, (res) => {
     if (res?.error) { $('#join-error').textContent = res.error; return; }
     ME = { playerId: res.playerId, token: res.token, name, emoji };
-    localStorage.setItem(`hitster_${CODE}`, JSON.stringify({ token: res.token, name, emoji }));
+    localStorage.setItem(`vitrola_${CODE}`, JSON.stringify({ token: res.token, name, emoji }));
     ['#me-emoji', '#g-emoji'].forEach(s => $(s).textContent = emoji);
     ['#me-name', '#g-name'].forEach(s => $(s).textContent = name);
     render(res.state);
@@ -76,6 +77,7 @@ function myTimeline() { return me()?.timeline || []; }
 function render(state) {
   if (!state || !ME) return;
   STATE = state;
+  FX.theme(state.config.tema);
   const p = me();
   if (!p) return;
 
@@ -110,6 +112,7 @@ function render(state) {
       ? state.winner === p.team
       : state.winner === p.id;
     $('#end-msg').textContent = winners ? '🏆 Voce venceu!' : 'Fim de jogo! Veja o placar na TV.';
+    if (winners && !window._celebrated) { window._celebrated = true; FX.confetti(120); FX.vibrate([80, 60, 80, 60, 200]); }
   }
 }
 
@@ -120,6 +123,7 @@ function syncPhase(state) {
   const isPaused = state.state === 'paused';
 
   show('#btn-replay', isMyTurn && state.phase && state.phase !== 'reveal');
+  show('#btn-early-guess', isMyTurn && !iGuessed && (state.phase === 'placing' || state.phase === 'contest'));
 
   // botao de contestar: so habilita depois que o jogador da vez jogou
   const canContest =
@@ -130,10 +134,15 @@ function syncPhase(state) {
     !alreadyContested &&
     (me()?.fichas ?? 0) > 0 &&
     state.contests.length < state.config.maxContestacoes;
+  const wasDisabled = contestBtn.disabled;
   contestBtn.disabled = !canContest;
+  if (wasDisabled && canContest) { FX.vibrate(35); FX.zoom(contestBtn); }
 
   if (state.phase === 'placing') {
-    if (isMyTurn && placingAs !== 'turn') openPlacer('turn', 'Sua vez! Onde essa musica entra na sua linha do tempo?');
+    if (isMyTurn && placingAs !== 'turn') {
+      FX.vibrate([60, 80, 60]);
+      openPlacer('turn', 'Sua vez! Onde essa musica entra na sua linha do tempo?');
+    }
     if (!isMyTurn) {
       const t = state.players.find(x => x.id === state.turnPlayerId);
       status(`🎶 Vez de ${t?.name || '...'}. Contestar libera quando a carta for posicionada.`, '');
@@ -155,7 +164,7 @@ function syncPhase(state) {
 
 // ---------------- rodadas ----------------
 socket.on('round:start', () => {
-  selectedSlot = null; placingAs = null; iContested = false; iPlacedContest = false;
+  selectedSlot = null; placingAs = null; iContested = false; iPlacedContest = false; iGuessed = false;
   hideAll();
   show('#p-reveal', false);
 });
@@ -171,8 +180,8 @@ socket.on('guess:open', () => { if (STATE) openGuesser(STATE); });
 
 socket.on('round:reveal', showReveal);
 
-socket.on('kicked', () => { localStorage.removeItem(`hitster_${CODE}`); alert('Voce foi removido da sala.'); location.href = '/'; });
-socket.on('room:closed', () => { localStorage.removeItem(`hitster_${CODE}`); location.href = '/'; });
+socket.on('kicked', () => { localStorage.removeItem(`vitrola_${CODE}`); alert('Voce foi removido da sala.'); location.href = '/'; });
+socket.on('room:closed', () => { localStorage.removeItem(`vitrola_${CODE}`); location.href = '/'; });
 
 // ---------------- posicionamento ----------------
 function openPlacer(mode, label) {
@@ -221,13 +230,20 @@ $('#btn-confirm-slot').addEventListener('click', () => {
     if (res?.error) return status(res.error, 'hot');
     if (placingAs === 'contest') iPlacedContest = true;
     hidePlacer();
+    FX.vibrate(25);
+    FX.flash('color-mix(in srgb, var(--ok) 35%, transparent)');
     status('Posicao confirmada. Cruze os dedos!', 'ok');
   });
 });
 
 // ---------------- contestacao ----------------
 $('#btn-contest').addEventListener('click', () => {
-  $('#btn-contest').disabled = true;
+  const btn = $('#btn-contest');
+  btn.disabled = true;
+  btn.classList.add('fx-ring', 'fired');
+  setTimeout(() => btn.classList.remove('fired'), 650);
+  FX.vibrate([40, 60, 40]);
+  FX.flash('color-mix(in srgb, var(--hot) 50%, transparent)');
   socket.emit('player:contest', (res) => {
     if (res?.error) { status(res.error, 'hot'); return; }
     // abertura do placer chega via evento contest:new
@@ -238,6 +254,12 @@ $('#btn-contest').addEventListener('click', () => {
 function openGuesser(state) {
   const modo = state.config.modo;
   const isMyTurn = state.turnPlayerId === ME.playerId;
+  // regra: alem do jogador da vez, apenas quem contestou responde artista e musica
+  if ((!isMyTurn && !iContested) || iGuessed) {
+    show('#guesser', false);
+    status(iGuessed ? 'Palpite enviado. Aguardando a revelacao...' : 'Janela de palpites: so o jogador da vez e os contestadores respondem.', '');
+    return;
+  }
   const mustGuess = (modo === 'PRO' || modo === 'EXPERT') && (isMyTurn || iContested);
   show('#guesser', true);
   show('#placer', false);
@@ -253,11 +275,23 @@ $('#btn-guess').addEventListener('click', () => {
     artist: $('#guess-artist').value,
     title: $('#guess-title').value,
     year: $('#guess-year').value || null
-  }, () => {
+  }, (res) => {
+    if (res?.error) return status(res.error, 'hot');
+    iGuessed = true;
     show('#guesser', false);
-    status('Palpite enviado. Aguardando a revelacao...', 'ok');
+    show('#btn-early-guess', false);
+    if (res.stopMusic) { FX.flash('color-mix(in srgb, var(--gold) 55%, transparent)'); FX.vibrate([30, 40, 30]); }
+    status(res.stopMusic ? '🎤 Musica cortada! Palpite registrado.' : 'Palpite enviado. Aguardando a revelacao...', 'ok');
     $('#guess-artist').value = ''; $('#guess-title').value = ''; $('#guess-year').value = '';
   });
+});
+
+// jogador da vez: responder antes da hora corta a musica na TV e dificulta contestacoes
+$('#btn-early-guess').addEventListener('click', () => {
+  const modo = STATE?.config.modo || 'ORIGINAL';
+  $('#guess-year').classList.toggle('hidden', modo !== 'EXPERT');
+  $('#guess-label').textContent = 'Responda para cortar a musica agora. Errar nao tira nada, acertar rende ficha.';
+  show('#guesser', true);
 });
 
 $('#btn-skip-guess').addEventListener('click', () => {
@@ -284,7 +318,12 @@ function showReveal(results) {
   }
   if (results.fichasGanhas.includes(ME.playerId)) verdict += ' +1 ficha por acertar artista e musica!';
 
+  if (mine) {
+    if (mine.keeps || mine.wins) { FX.flash('color-mix(in srgb, var(--ok) 50%, transparent)'); FX.vibrate([50, 50, 120]); FX.confetti(45); }
+    else if (!mine.posOk) { FX.flash('color-mix(in srgb, var(--bad) 45%, transparent)'); FX.vibrate(180); FX.shake(); }
+  }
   const box = $('#p-reveal');
+  box.classList.remove('flip-in'); void box.offsetWidth; box.classList.add('flip-in');
   box.style.setProperty('--dec', decColor(s.year));
   box.innerHTML = `
     <div class="big-year">${s.year}</div>

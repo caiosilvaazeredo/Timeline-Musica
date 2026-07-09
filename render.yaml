@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: hitster-digital
+    name: vitrola
     runtime: node
     plan: free
     buildCommand: npm install
@@ -8,9 +8,9 @@ services:
     healthCheckPath: /api/health
     envVars:
       - key: BASE_URL
-        sync: false        # ex: https://hitster-digital.onrender.com
+        sync: false        # ex: https://vitrola.onrender.com
       - key: JOIN_URL
-        sync: false        # opcional: dominio curto para jogadores, ex https://hitster.page
+        sync: false        # opcional: dominio curto para jogadores, ex https://vitrola.page
       - key: SPOTIFY_CLIENT_ID
         sync: false
       - key: SPOTIFY_CLIENT_SECRET

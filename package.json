@@ -1,7 +1,7 @@
 {
-  "name": "hitster-digital",
+  "name": "vitrola",
   "version": "1.0.0",
-  "description": "Versao digital multiplayer do Hitster: TV como palco, celulares como controles via QR code",
+  "description": "Vitrola: jogo de linha do tempo musical com TV como palco, celulares como controles via QR code",
   "main": "server.js",
   "type": "commonjs",
   "engines": {

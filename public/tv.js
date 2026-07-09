@@ -1,4 +1,4 @@
-/* Hitster Digital, TV */
+/* Vitrola, TV */
 const socket = io();
 const $ = (s) => document.querySelector(s);
 const decColor = (y) => `var(--d${Math.min(2020, Math.max(1930, Math.floor(y / 10) * 10))})`;
@@ -11,7 +11,7 @@ let ytPlayer = null, ytReady = false;
 let playTimer = null, progressTimer = null;
 
 // ---------------- criacao / reconexao da sala ----------------
-const savedCode = sessionStorage.getItem('hitster_tv_room');
+const savedCode = sessionStorage.getItem('vitrola_tv_room');
 if (savedCode) {
   socket.emit('tv:reclaim', { code: savedCode }, (res) => {
     if (res?.ok) bootRoom(savedCode, res, res.state);
@@ -21,7 +21,7 @@ if (savedCode) {
 
 function createRoom() {
   socket.emit('tv:create', (res) => {
-    sessionStorage.setItem('hitster_tv_room', res.code);
+    sessionStorage.setItem('vitrola_tv_room', res.code);
     bootRoom(res.code, res, res.state);
   });
 }
@@ -57,6 +57,7 @@ async function loadDeckStats() {
 // ---------------- configuracao ----------------
 function pushConfig() {
   const config = {
+    tema: $('#cfg-tema').value,
     modo: $('#cfg-modo').value,
     meta: Number($('#cfg-meta').value),
     fichasIniciais: Number($('#cfg-fichas').value),
@@ -74,7 +75,7 @@ function pushConfig() {
   socket.emit('tv:config', { config }, (res) => { if (res?.error) toast(res.error); });
   updateFonteStatus();
 }
-['#cfg-modo','#cfg-meta','#cfg-fichas','#cfg-fonte','#cfg-trecho','#cfg-contest','#cfg-origem','#cfg-bbus','#cfg-bbbr','#cfg-dmin','#cfg-dmax']
+['#cfg-tema','#cfg-modo','#cfg-meta','#cfg-fichas','#cfg-fonte','#cfg-trecho','#cfg-contest','#cfg-origem','#cfg-bbus','#cfg-bbbr','#cfg-dmin','#cfg-dmax']
   .forEach(sel => $(sel).addEventListener('change', pushConfig));
 
 let spotifyQrDrawn = false;
@@ -156,13 +157,16 @@ socket.on('round:start', async ({ number, turnPlayerId }) => {
   $('#reveal-panel').classList.add('hidden');
   $('#contest-strip').innerHTML = '';
   const p = STATE?.players.find(x => x.id === turnPlayerId);
-  $('#turn-banner').innerHTML = `Rodada ${number}: vez de <strong>${esc(p?.name || '?')}</strong> ${p?.emoji || ''}`;
+  const tb = $('#turn-banner');
+  tb.innerHTML = `Rodada ${number}: vez de <strong>${esc(p?.name || '?')}</strong> ${p?.emoji || ''}`;
+  tb.classList.remove('slide-pop'); void tb.offsetWidth; tb.classList.add('slide-pop');
   $('#phase-status').textContent = 'Sorteando o proximo disco...';
   await playCurrentTrack();
 });
 
 socket.on('turn:placed', () => {
   $('#phase-status').textContent = 'Carta posicionada. Janela de contestacao aberta: usem o botao no celular.';
+  FX.zoom($('#phase-status'));
 });
 
 socket.on('contest:open', ({ seconds }) => {
@@ -175,6 +179,8 @@ socket.on('contest:new', ({ playerId, tie }) => {
   chip.className = 'contest-chip' + (tie ? ' tie' : '');
   chip.textContent = `${p?.emoji || ''} ${p?.name || '?'} contestou!`;
   $('#contest-strip').appendChild(chip);
+  FX.flash('color-mix(in srgb, var(--hot) 55%, transparent)');
+  FX.shake();
   if (tie) toast('Contestacao simultanea: ordem definida por sorteio');
 });
 
@@ -187,8 +193,10 @@ socket.on('round:reveal', (results) => {
   clearInterval(window._cd);
   const s = results.song;
   const panel = $('#reveal-panel');
-  $('#reveal-card').style.setProperty('--dec', decColor(s.year));
-  $('#reveal-year').textContent = s.year;
+  const card = $('#reveal-card');
+  card.style.setProperty('--dec', decColor(s.year));
+  card.classList.remove('flip-in'); void card.offsetWidth; card.classList.add('flip-in');
+  FX.countUp($('#reveal-year'), s.year, 900);
   $('#reveal-title').textContent = s.title;
   $('#reveal-artist').textContent = `Interprete: ${s.artist}`;
   $('#reveal-composer').textContent = s.composer && s.composer !== s.artist ? `Autor original: ${s.composer}` : `Autoria: ${s.composer || s.artist}`;
@@ -208,12 +216,14 @@ socket.on('round:reveal', (results) => {
   });
   $('#phase-status').textContent = '';
   panel.classList.remove('hidden');
+  if (results.cardWonBy) setTimeout(() => FX.confetti(70), 650);
 });
 
 socket.on('game:over', ({ winner, state }) => {
   STATE = state;
   stopAudio();
-  setTimeout(() => showEnd(winner), 2500);
+  FX.confetti(160);
+  setTimeout(() => { showEnd(winner); FX.confetti(200); }, 2500);
 });
 
 socket.on('reaction', ({ emoji }) => {
@@ -237,8 +247,16 @@ socket.on('chat', ({ name, emoji, text }) => {
 
 socket.on('playback:replay', () => playCurrentTrack(true));
 
+socket.on('playback:stop', () => {
+  const disc = document.querySelector('#overlay-vinyl .vinyl');
+  disc.classList.add('scratch');
+  FX.flash('color-mix(in srgb, var(--gold) 60%, transparent)');
+  setTimeout(() => { disc.classList.remove('scratch'); stopAudio(); }, 520);
+  $('#phase-status').textContent = '🎤 O jogador da vez cortou a musica para responder!';
+});
+
 socket.on('room:closed', () => {
-  sessionStorage.removeItem('hitster_tv_room');
+  sessionStorage.removeItem('vitrola_tv_room');
   location.href = '/';
 });
 
@@ -246,6 +264,8 @@ socket.on('room:closed', () => {
 function render(state) {
   if (!state) return;
   STATE = state;
+  FX.theme(state.config.tema);
+  if ($('#cfg-tema').value !== state.config.tema) $('#cfg-tema').value = state.config.tema;
 
   // lobby
   $('#player-count').textContent = `${state.players.filter(p => p.connected).length}/8`;
@@ -434,7 +454,7 @@ function initSpotifySDK() {
     if (!spotifyToken) return resolve();
     window.onSpotifyWebPlaybackSDKReady = () => {
       spotifyPlayer = new Spotify.Player({
-        name: 'Hitster Digital TV',
+        name: 'Vitrola TV',
         getOAuthToken: async (cb) => cb(await refreshSpotifyToken()),
         volume: 0.9
       });

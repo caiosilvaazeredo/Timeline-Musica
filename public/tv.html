@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hitster Digital, TV</title>
+<title>Vitrola, TV</title>
 <link rel="stylesheet" href="/base.css">
 <link rel="stylesheet" href="/tv.css">
 </head>
@@ -12,13 +12,23 @@
 <!-- ============ LOBBY ============ -->
 <section id="scr-lobby" class="screen">
   <header class="tv-head">
-    <div class="brand"><span class="mini-vinyl" aria-hidden="true"></span> HITSTER <em>DIGITAL</em></div>
+    <div class="brand"><span class="mini-vinyl" aria-hidden="true"></span> VITROLA</div>
     <div class="room-code num" id="lobby-code" title="Codigo da sala">-----</div>
   </header>
 
   <div class="lobby-grid">
     <aside class="panel config">
       <h2>Configuracao da partida</h2>
+
+      <label>Tema visual
+        <select id="cfg-tema">
+          <option value="vitrola">Vitrola (ameixa e ouro)</option>
+          <option value="neon">Neon de madrugada</option>
+          <option value="tropical">Tropical</option>
+          <option value="retro">Retro claro</option>
+          <option value="meianoite">Meia-noite rubra</option>
+        </select>
+      </label>
 
       <label>Modo de jogo
         <select id="cfg-modo">
@@ -95,7 +105,7 @@
 <!-- ============ JOGO ============ -->
 <section id="scr-game" class="screen hidden">
   <header class="tv-head slim">
-    <div class="brand"><span class="mini-vinyl" aria-hidden="true"></span> HITSTER <em>DIGITAL</em></div>
+    <div class="brand"><span class="mini-vinyl" aria-hidden="true"></span> VITROLA</div>
     <div class="round-info"><span id="game-round" class="num"></span> <span id="deck-left" class="num"></span></div>
     <div class="host-controls">
       <button id="btn-pause" class="btn-ghost slim-btn">Pausar</button>
@@ -158,6 +168,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
+<script src="/fx.js"></script>
 <script src="/tv.js"></script>
 </body>
 </html>

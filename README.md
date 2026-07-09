@@ -1,6 +1,6 @@
-# Hitster Digital
+# Vitrola
 
-Versao digital multiplayer do Hitster para jogar na sala: a TV e o palco (audio, QR code, placar) e cada jogador usa o proprio celular como controle, no estilo Kahoot. Ate 8 jogadores simultaneos.
+Jogo de festa multiplayer de linha do tempo musical (inspirado no classico Hitster) para jogar na sala: a TV e o palco (audio, QR code, placar) e cada jogador usa o proprio celular como controle, no estilo Kahoot. Ate 8 jogadores simultaneos.
 
 ## Como funciona
 
@@ -64,14 +64,14 @@ Para testar com celulares na mesma rede, defina `BASE_URL=http://SEU_IP_LOCAL:30
 
 O jogo e um servico web unico: depois do deploy, a TV abre `https://SEU-APP.onrender.com/tv` e os jogadores entram de qualquer lugar (Wi-Fi, 4G, outra cidade) pelo QR code, pelo atalho `https://SEU-APP.onrender.com/CODIGO` ou digitando o codigo na pagina inicial. Nada roda em localhost em producao; o localhost e apenas para desenvolvimento.
 
-Para replicar o par kahoot.com/kahoot.it, use a variavel `JOIN_URL` com um dominio curto proprio (ex: `https://hitster.page`) apontado para o mesmo servico no Render (Settings > Custom Domains). O QR code e a instrucao na TV passam a exibir o dominio curto, enquanto o host continua usando o principal.
+Para replicar o par kahoot.com/kahoot.it, use a variavel `JOIN_URL` com um dominio curto proprio (ex: `https://vitrola.page`) apontado para o mesmo servico no Render (Settings > Custom Domains). O QR code e a instrucao na TV passam a exibir o dominio curto, enquanto o host continua usando o principal.
 
 ## Deploy no Render
 
 1. Suba o projeto para um repositorio no GitHub.
 2. No Render: New > Blueprint e aponte para o repositorio (o `render.yaml` ja esta pronto). Ou crie um Web Service Node com build `npm install` e start `npm start`.
 3. Configure as variaveis de ambiente:
-   - `BASE_URL`: a URL publica do servico (ex: `https://hitster-digital.onrender.com`)
+   - `BASE_URL`: a URL publica do servico (ex: `https://vitrola.onrender.com`)
    - `JOIN_URL`: opcional, dominio curto de entrada dos jogadores (padrao: BASE_URL)
    - `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET`: opcionais, para a fonte Spotify
    - `YT_API_KEY`: opcional, para a fonte YouTube

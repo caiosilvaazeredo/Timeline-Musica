@@ -1,4 +1,4 @@
-// Motor do Hitster Digital: estado das salas, maquina de rodadas, contestacao e vitoria
+// Motor do Vitrola: estado das salas, maquina de rodadas, contestacao e vitoria
 const crypto = require('crypto');
 const { buildDeck } = require('./songs');
 const { matchArtist, matchTitle } = require('./match');
@@ -19,6 +19,7 @@ function code4() {
 }
 
 const DEFAULT_CONFIG = {
+  tema: 'vitrola',             // vitrola | neon | tropical | retro | meianoite
   modo: 'ORIGINAL',            // ORIGINAL | PRO | EXPERT | EQUIPES
   meta: 10,                    // cartas para vencer
   fichasIniciais: 2,           // PRO usa 5 por padrao (ajustado no start se nao alterado)
@@ -253,13 +254,27 @@ function placeContestCard(room, playerId, slot) {
 
 function submitGuess(room, playerId, guess) {
   const r = room.round;
-  if (!r || (r.phase !== 'guessing' && r.phase !== 'contest')) return { error: 'Fora da janela de palpite.' };
+  if (!r || !['placing', 'contest', 'guessing'].includes(r.phase)) return { error: 'Fora da janela de palpite.' };
+  const isTurn = playerId === r.turnPlayerId;
+  const isContester = r.contests.some(c => c.playerId === playerId);
+  // regra: alem do jogador da vez, somente quem contestou responde artista e musica
+  if (!isTurn && !isContester) return { error: 'Apenas o jogador da vez e os contestadores podem dar palpite.' };
+  // durante o posicionamento, apenas o jogador da vez pode responder (e com isso cortar a musica)
+  if (r.phase === 'placing' && !isTurn) return { error: 'Aguarde a carta ser posicionada.' };
   r.guesses[playerId] = {
     artist: String(guess.artist || '').slice(0, 60),
     title: String(guess.title || '').slice(0, 80),
     year: guess.year ? Number(guess.year) : null
   };
-  return { ok: true };
+  return { ok: true, stopMusic: isTurn };
+}
+
+// todos os elegiveis (jogador da vez + contestadores) ja palpitaram?
+function allEligibleGuessed(room) {
+  const r = room.round;
+  if (!r) return false;
+  const eligible = [r.turnPlayerId, ...r.contests.map(c => c.playerId)];
+  return eligible.every(pid => r.guesses[pid] !== undefined);
 }
 
 // ---------- revelacao e pontuacao ----------
@@ -382,7 +397,7 @@ function removeRoom(code) {
 
 module.exports = {
   rooms, createRoom, getRoom, addPlayer, startGame, startRound,
-  placeTurnCard, requestContest, placeContestCard, submitGuess, reveal,
+  placeTurnCard, requestContest, placeContestCard, submitGuess, allEligibleGuessed, reveal,
   publicState, timelineOf, removeRoom, entities,
   PLACING_TIMEOUT_MS, CONTEST_WINDOW_MS, GUESS_WINDOW_MS, MAX_PLAYERS
 };

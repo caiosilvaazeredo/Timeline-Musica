@@ -24,6 +24,7 @@
   padding: 8px 16px; font-weight: 700; display: flex; gap: 8px; align-items: center;
 }
 #p-lobby h2 { font-size: 1.05rem; color: var(--cream-dim); font-weight: 500; }
+.btn-gold { color: var(--ink); }
 .spotify-me {
   display: flex; align-items: center; justify-content: center; gap: 10px;
   background: #1ED760; color: #0B2814; text-decoration: none;
@@ -60,6 +61,8 @@
 @keyframes pulse { 50% { transform: scale(1.03); box-shadow: 0 10px 44px rgba(255,93,115,.55); } }
 
 .replay { align-self: center; }
+.turn-tools { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+#btn-early-guess { border-color: var(--gold); color: var(--gold); }
 
 .placer { display: flex; flex-direction: column; gap: 12px; }
 .timeline {
@@ -71,7 +74,8 @@
   border: 2px dashed rgba(232,184,75,.5); background: rgba(232,184,75,.06);
   color: var(--gold); font-size: 1.4rem; font-weight: 700; flex-shrink: 0;
 }
-.slot.sel { background: var(--gold); color: #2A1D07; border-style: solid; }
+.slot.sel { background: var(--gold); color: var(--ink); border-style: solid; animation: slotPop .25s ease; }
+@keyframes slotPop { 50% { transform: scale(1.15); } }
 .timeline .card45 { flex-shrink: 0; }
 
 .guesser { display: flex; flex-direction: column; gap: 10px; }

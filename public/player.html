@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Hitster Digital, Jogador</title>
+<title>Vitrola, Jogador</title>
 <link rel="stylesheet" href="/base.css">
 <link rel="stylesheet" href="/player.css">
 </head>
@@ -58,8 +58,11 @@
     CONTESTAR<small>usa 1 ficha, e voce joga a carta</small>
   </button>
 
-  <!-- botao tocar novamente (jogador da vez) -->
-  <button id="btn-replay" class="btn-ghost replay hidden">🔁 Tocar trecho novamente</button>
+  <!-- botoes do jogador da vez -->
+  <div class="turn-tools">
+    <button id="btn-replay" class="btn-ghost replay hidden">🔁 Tocar de novo</button>
+    <button id="btn-early-guess" class="btn-ghost replay hidden">✋ Ja sei! Cortar a musica e responder</button>
+  </div>
 
   <!-- posicionamento na linha do tempo -->
   <div id="placer" class="placer hidden">
@@ -110,6 +113,7 @@
 </section>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/fx.js"></script>
 <script src="/player.js"></script>
 </body>
 </html>

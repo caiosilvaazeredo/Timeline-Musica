@@ -21,8 +21,10 @@ O QR code e o atalho de entrada usam sempre a URL real que a TV esta servindo na
 4. Ao iniciar, cada jogador recebe uma carta inicial. A cada rodada a TV fica preta com o vinil dourado girando enquanto o trecho toca.
 5. O jogador da vez posiciona a carta na propria linha do tempo pelo celular. Depois que ele joga, o botao CONTESTAR libera para os demais.
 6. Quem contesta gasta 1 ficha e e obrigado a posicionar a carta na propria linha. Ate N jogadores podem contestar a mesma carta (configuravel). Cliques simultaneos (janela de 400ms) vao a sorteio, e a ordem define quem tem prioridade sobre a carta.
-7. Na revelacao a TV mostra ano, musica, interprete mais conhecido e autor original. Acertar artista + musica rende 1 ficha em qualquer modo.
-8. Vence quem atingir a meta de cartas (padrao 10).
+7. Durante a rodada a TV exibe a linha do tempo do jogador da vez, e a carta misteriosa pulsa no intervalo que ele escolheu assim que posiciona: toda a sala acompanha a jogada.
+8. Na revelacao a TV mostra ano, musica, interprete mais conhecido e autor original. Acertar a musica rende +1 ficha e acertar o artista/autor rende +1 ficha (ate 2 por rodada). A comparacao e tolerante a erros de escrita: "bohemian rapsody", "quen" ou so "jobim" contam como acerto.
+9. Apos a revelacao, quem inicia a proxima rodada e o proprio proximo jogador, pelo celular; a TV exibe "Aguardando X iniciar a proxima rodada" (o host mantem um botao de forcar, se precisar).
+10. Vence quem atingir a meta de cartas (padrao 10).
 
 ## Modos
 

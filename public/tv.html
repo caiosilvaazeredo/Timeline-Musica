@@ -152,6 +152,13 @@
     <div class="stage-main">
       <div id="turn-banner" class="turn-banner"></div>
       <div id="phase-status" class="phase-status"></div>
+
+      <!-- linha do tempo do jogador da vez, visivel para toda a sala -->
+      <div id="turn-line-wrap" class="turn-line-wrap hidden">
+        <p class="turn-line-label" id="turn-line-label"></p>
+        <div id="turn-line" class="turn-line"></div>
+      </div>
+
       <div id="contest-strip" class="contest-strip"></div>
 
       <!-- revelacao -->
@@ -163,7 +170,8 @@
           <div class="reveal-composer" id="reveal-composer"></div>
         </div>
         <ul id="reveal-results" class="reveal-results"></ul>
-        <button id="btn-next" class="btn-gold">Proxima rodada</button>
+        <p id="next-wait" class="next-wait"></p>
+        <button id="btn-next" class="btn-ghost slim-btn">Forcar proxima rodada (host)</button>
       </div>
     </div>
 

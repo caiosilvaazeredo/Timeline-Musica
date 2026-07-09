@@ -73,7 +73,7 @@
 
   <!-- palpite de artista e musica -->
   <div id="guesser" class="guesser hidden">
-    <p class="lbl" id="guess-label">Sabe qual e? Acerte artista e musica para ganhar 1 ficha</p>
+    <p class="lbl" id="guess-label"></p>
     <input id="guess-artist" placeholder="Artista ou autor original">
     <input id="guess-title" placeholder="Nome da musica">
     <input id="guess-year" class="hidden" type="number" placeholder="Ano exato (modo Expert)">
@@ -82,6 +82,11 @@
       <button id="btn-skip-guess" class="btn-ghost">Nao sei</button>
     </div>
   </div>
+
+  <!-- proximo jogador inicia a rodada daqui -->
+  <button id="btn-start-round" class="start-round hidden">
+    🎬 SUA VEZ AGORA<small>toque para iniciar a proxima rodada</small>
+  </button>
 
   <!-- resultado da rodada -->
   <div id="p-reveal" class="p-reveal hidden"></div>

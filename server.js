@@ -451,6 +451,14 @@ io.on('connection', (socket) => {
     }
   });
 
+  // o proximo jogador da vez inicia a rodada do proprio celular
+  socket.on('player:next-round', () => {
+    const room = engine.getRoom(socket.data.roomCode);
+    if (!room || room.state !== 'playing' || room.round?.phase !== 'reveal') return;
+    const next = engine.peekNextTurn(room);
+    if (next && next.id === socket.data.playerId) beginRound(room);
+  });
+
   socket.on('player:replay', () => {
     const room = engine.getRoom(socket.data.roomCode);
     // apenas o jogador da vez pode pedir para tocar novamente

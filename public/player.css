@@ -104,3 +104,14 @@
 
 #p-end { align-items: center; justify-content: center; text-align: center; }
 #end-msg { font-size: 1.6rem; }
+
+/* botao de iniciar a proxima rodada (proximo jogador da vez) */
+.start-round {
+  background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--gold) 80%, #fff), var(--gold) 70%);
+  color: var(--ink); border-radius: 26px; padding: 22px;
+  font-family: var(--font-display); font-weight: 900; font-size: 1.3rem;
+  display: flex; flex-direction: column; gap: 4px; align-items: center;
+  box-shadow: 0 10px 34px color-mix(in srgb, var(--gold) 40%, transparent);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.start-round small { font-family: var(--font-body); font-weight: 600; font-size: .72rem; opacity: .85; }

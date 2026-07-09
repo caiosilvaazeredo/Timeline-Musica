@@ -166,6 +166,21 @@ function nextTurnPlayer(room) {
   return { entityId: p.id, player: p };
 }
 
+// Espia quem sera o proximo jogador da vez, sem mudar o estado
+function peekNextTurn(room) {
+  const active = room.players.filter(p => p.connected);
+  if (!active.length) return null;
+  if (room.config.modo === 'EQUIPES') {
+    const teamNames = Object.keys(room.teams);
+    if (!teamNames.length) return null;
+    const team = teamNames[(room.turnIndex + 1) % teamNames.length];
+    const members = active.filter(p => p.team === team);
+    if (!members.length) return null;
+    return members[(room.roundCount + 1) % members.length];
+  }
+  return active[(room.turnIndex + 1) % active.length];
+}
+
 function startRound(room) {
   if (!room.deck.length) { room.state = 'ended'; room.winner = leader(room); return null; }
   room.roundCount++;
@@ -308,11 +323,15 @@ function reveal(room) {
     results.cardWonBy = r.turnEntityId;
   }
 
-  // ficha por acertar artista + titulo (qualquer modo, independentemente da posicao)
+  // fichas por palpite (qualquer modo, independentemente da posicao):
+  // +1 por acertar a musica, +1 por acertar o autor/interprete, ate 2 por rodada
   for (const [pid, gg] of Object.entries(r.guesses)) {
-    if (gg.artist && gg.title && matchArtist(gg.artist, song) && matchTitle(gg.title, song)) {
-      spendFicha(room, pid, +1);
-      results.fichasGanhas.push(pid);
+    const titleOk2 = gg.title ? matchTitle(gg.title, song) : false;
+    const artistOk2 = gg.artist ? matchArtist(gg.artist, song) : false;
+    const total = (titleOk2 ? 1 : 0) + (artistOk2 ? 1 : 0);
+    if (total > 0) {
+      spendFicha(room, pid, +total);
+      results.fichasGanhas.push({ playerId: pid, title: titleOk2, artist: artistOk2, total });
     }
   }
 
@@ -373,6 +392,8 @@ function publicState(room) {
     turnPlayerId: room.round?.turnPlayerId || null,
     turnEntityId: room.round?.turnEntityId || null,
     turnPlaced: room.round ? room.round.turnPlacement !== null : false,
+    turnPlacementSlot: room.round ? room.round.turnPlacement : null,
+    nextTurnPlayerId: room.state === 'playing' && room.round?.phase === 'reveal' ? (peekNextTurn(room)?.id || null) : null,
     contests: room.round ? room.round.contests.map(c => ({ playerId: c.playerId, entityId: c.entityId, placed: c.slot !== null, tieBroken: c.tieBroken })) : [],
     deckLeft: room.deck.length,
     winner: room.winner,
@@ -412,6 +433,6 @@ function listPublicRooms() {
 module.exports = {
   rooms, createRoom, getRoom, addPlayer, startGame, startRound,
   placeTurnCard, requestContest, placeContestCard, submitGuess, allEligibleGuessed, reveal,
-  publicState, timelineOf, removeRoom, entities, listPublicRooms,
+  publicState, timelineOf, removeRoom, entities, listPublicRooms, peekNextTurn,
   PLACING_TIMEOUT_MS, CONTEST_WINDOW_MS, GUESS_WINDOW_MS, MAX_PLAYERS
 };

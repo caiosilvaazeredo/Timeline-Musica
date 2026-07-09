@@ -43,17 +43,43 @@ function similarity(a, b) {
   return 1 - dist / Math.max(a.length, b.length);
 }
 
-// Aceita resposta se bater com o interprete OU com o autor original
+// Palavras irrelevantes ignoradas na comparacao por tokens
+const STOP = new Set(['the', 'a', 'o', 'os', 'as', 'um', 'uma', 'de', 'da', 'do', 'dos', 'das', 'e', 'and', 'banda', 'grupo', 'mc', 'dj', 'feat', 'ft', 'part']);
+
+function tokens(s) {
+  return normalize(s).split(' ').filter(w => w.length > 1 && !STOP.has(w));
+}
+
+// Pontuacao por tokens: cada palavra do palpite conta se casar (com tolerancia a
+// erro de digitacao) com alguma palavra do alvo. Assim "bohemian rapsody",
+// "queen bohemian" ou "ravel bolero" passam mesmo sem escrita exata.
+function tokenScore(guess, target) {
+  const tg = tokens(guess), tt = tokens(target);
+  if (!tg.length || !tt.length) return 0;
+  let hits = 0;
+  for (const w of tg) if (tt.some(x => similarity(x, w) >= 0.8)) hits++;
+  return hits / Math.max(tg.length, tt.length);
+}
+
+// Casamento tolerante: aceita similaridade global alta (erros de digitacao),
+// contencao (ja tratada em similarity) ou 2/3 das palavras relevantes batendo
+function fuzzyMatch(guess, target) {
+  if (!guess || !target) return false;
+  return similarity(guess, target) >= 0.74 || tokenScore(guess, target) >= 0.67;
+}
+
+// Aceita resposta se bater com o interprete OU com o autor original,
+// inteiro ou qualquer um dos nomes (ex: "jobim" vale para "Tom Jobim e Vinicius de Moraes")
 function matchArtist(guess, song) {
   const targets = [song.artist, song.composer].filter(Boolean);
   return targets.some(t =>
-    t.split(/[,&\/]| e /i).some(part => similarity(guess, part) >= 0.78) ||
-    similarity(guess, t) >= 0.78
+    fuzzyMatch(guess, t) ||
+    t.split(/[,&\/]| e /i).some(part => part.trim() && fuzzyMatch(guess, part))
   );
 }
 
 function matchTitle(guess, song) {
-  return similarity(guess, song.title) >= 0.78;
+  return fuzzyMatch(guess, song.title);
 }
 
-module.exports = { normalize, similarity, matchArtist, matchTitle };
+module.exports = { normalize, similarity, tokenScore, fuzzyMatch, matchArtist, matchTitle };

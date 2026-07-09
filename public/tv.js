@@ -260,8 +260,9 @@ socket.on('round:reveal', (results) => {
     ul.insertAdjacentHTML('beforeend',
       `<li class="${c.wins ? 'ok' : c.posOk ? '' : 'bad'}">${name(c.playerId)} contestou${c.tieBroken ? ' (sorteio)' : ''}: ${c.slot === null ? 'nao jogou' : c.posOk ? 'posicao correta' : 'posicao errada'}${c.wins ? ' e levou a carta!' : ''}</li>`);
   });
-  results.fichasGanhas.forEach(pid => {
-    ul.insertAdjacentHTML('beforeend', `<li class="ok">${name(pid)} acertou artista e musica: +1 ficha</li>`);
+  results.fichasGanhas.forEach(f => {
+    const what = f.title && f.artist ? 'musica e artista: +2 fichas' : f.title ? 'a musica: +1 ficha' : 'o artista: +1 ficha';
+    ul.insertAdjacentHTML('beforeend', `<li class="ok">${name(f.playerId)} acertou ${what}</li>`);
   });
   $('#phase-status').textContent = '';
   panel.classList.remove('hidden');
@@ -345,7 +346,35 @@ function render(state) {
     $('#game-round').textContent = state.roundNumber ? `Rodada ${state.roundNumber}` : '';
     $('#deck-left').textContent = `Baralho: ${state.deckLeft}`;
     renderScoreboard(state);
+    renderTurnLine(state);
+
+    // revelacao: quem inicia a proxima rodada e o proprio proximo jogador, no celular
+    if (state.phase === 'reveal' && state.nextTurnPlayerId) {
+      const nx = state.players.find(p => p.id === state.nextTurnPlayerId);
+      $('#next-wait').textContent = `Aguardando ${nx?.emoji || ''} ${nx?.name || '...'} iniciar a proxima rodada no celular...`;
+    } else {
+      $('#next-wait').textContent = '';
+    }
   }
+}
+
+// Linha do tempo do jogador da vez, com a carta misteriosa pulsando no
+// intervalo escolhido assim que ele posiciona
+function renderTurnLine(state) {
+  const wrap = $('#turn-line-wrap');
+  const showing = state.phase && state.phase !== 'reveal' && state.turnPlayerId;
+  wrap.classList.toggle('hidden', !showing);
+  if (!showing) return;
+  const p = state.players.find(x => x.id === state.turnPlayerId);
+  if (!p) return;
+  const who = state.config.modo === 'EQUIPES' ? `equipe ${p.team}` : p.name;
+  $('#turn-line-label').textContent = `Linha do tempo de ${who}`;
+  const cards = p.timeline.map(c => `<div class="card45" style="--dec:${decColor(c.year)}">
+    <div class="year">${c.year}</div><div class="song">${esc(c.title)}</div><div class="who">${esc(c.artist)}</div></div>`);
+  if (state.turnPlaced && state.turnPlacementSlot !== null) {
+    cards.splice(state.turnPlacementSlot, 0, `<div class="mystery-card" title="Carta da rodada">?</div>`);
+  }
+  $('#turn-line').innerHTML = cards.join('');
 }
 
 function renderScoreboard(state) {

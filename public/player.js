@@ -157,6 +157,12 @@ function syncPhase(state) {
     status('Carta posicionada. Aguarde possiveis contestacoes...', '');
   }
 
+  // proximo jogador da vez inicia a rodada do celular
+  const iAmNext = state.phase === 'reveal' && state.nextTurnPlayerId === ME.playerId && state.state === 'playing';
+  const startBtn = $('#btn-start-round');
+  if (iAmNext && startBtn.classList.contains('hidden')) { FX.vibrate([50, 60, 50]); }
+  show('#btn-start-round', iAmNext);
+
   if (state.phase === 'guessing') openGuesser(state);
   if (state.phase === 'reveal' && state.reveal) showReveal(state.reveal);
   if (!state.phase) { hideAll(); status('Preparando a proxima rodada...', ''); }
@@ -265,8 +271,8 @@ function openGuesser(state) {
   show('#placer', false);
   $('#guess-year').classList.toggle('hidden', modo !== 'EXPERT');
   $('#guess-label').textContent = mustGuess
-    ? `Modo ${modo}: acerte artista e musica${modo === 'EXPERT' ? ' e o ano exato' : ''} para valer a carta.`
-    : 'Sabe qual e? Acerte artista e musica e ganhe 1 ficha.';
+    ? `Modo ${modo}: acerte artista e musica${modo === 'EXPERT' ? ' e o ano exato' : ''} para valer a carta. Nao precisa escrever perfeito.`
+    : 'Musica certa: +1 ficha. Artista certo: +1 ficha. Pode errar a grafia, a gente entende.';
   status('Janela de palpites aberta.', '');
 }
 
@@ -316,7 +322,11 @@ function showReveal(results) {
     else if (mine.slot === null) { verdict = 'Tempo esgotado, sem jogada.'; cls = 'bad'; }
     else { verdict = 'Posicao errada. Carta descartada.'; cls = 'bad'; }
   }
-  if (results.fichasGanhas.includes(ME.playerId)) verdict += ' +1 ficha por acertar artista e musica!';
+  const myFichas = results.fichasGanhas.find(f => f.playerId === ME.playerId);
+  if (myFichas) {
+    const what = myFichas.title && myFichas.artist ? 'musica e artista: +2 fichas' : myFichas.title ? 'a musica: +1 ficha' : 'o artista: +1 ficha';
+    verdict += ` Acertou ${what}!`;
+  }
 
   if (mine) {
     if (mine.keeps || mine.wins) { FX.flash('color-mix(in srgb, var(--ok) 50%, transparent)'); FX.vibrate([50, 50, 120]); FX.confetti(45); }
@@ -336,6 +346,12 @@ function showReveal(results) {
 }
 
 // ---------------- extras ----------------
+$('#btn-start-round').addEventListener('click', () => {
+  show('#btn-start-round', false);
+  FX.flash('color-mix(in srgb, var(--gold) 45%, transparent)');
+  socket.emit('player:next-round');
+});
+
 $('#btn-replay').addEventListener('click', () => socket.emit('player:replay'));
 
 document.querySelectorAll('.reactions button').forEach(b =>

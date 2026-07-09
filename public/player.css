@@ -115,3 +115,5 @@
   animation: pulse 1.2s ease-in-out infinite;
 }
 .start-round small { font-family: var(--font-body); font-weight: 600; font-size: .72rem; opacity: .85; }
+
+.hurry { align-self: center; border-color: var(--hot); color: var(--hot); animation: pop .3s ease; }

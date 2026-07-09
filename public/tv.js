@@ -42,8 +42,9 @@ document.querySelectorAll('.vis-btn').forEach(b => {
   });
 });
 
-$('#mc-quick').addEventListener('click', () => startWithMode(true));
-$('#mc-custom').addEventListener('click', () => startWithMode(false));
+document.querySelectorAll('.mc-quick').forEach(b =>
+  b.addEventListener('click', () => startWithMode(b.dataset.quick)));
+$('#mc-custom').addEventListener('click', () => startWithMode(null));
 
 function startWithMode(quick) {
   $('#scr-mode-choice').classList.add('hidden');
@@ -80,7 +81,7 @@ function bootRoom(code, res, state) {
   const join = buildJoinInfo(code, res.joinOverride);
   $('#join-host').textContent = join.host;
   $('#join-code-inline').textContent = code;
-  new QRCode($('#qrcode'), { text: join.url, width: 220, height: 220, colorDark: '#1B1226', colorLight: '#F4E8CF' });
+  new QRCode($('#qrcode'), { text: join.url, width: 320, height: 320, colorDark: '#1B1226', colorLight: '#F4E8CF' });
   render(state);
   loadFeatures();
   loadDeckStats();
@@ -205,6 +206,8 @@ socket.on('game:started', () => {
 socket.on('round:start', async ({ number, turnPlayerId }) => {
   $('#reveal-panel').classList.add('hidden');
   $('#contest-strip').innerHTML = '';
+  $('#turn-guess').classList.add('hidden');
+  $('#turn-guess').textContent = '';
   const p = STATE?.players.find(x => x.id === turnPlayerId);
   const tb = $('#turn-banner');
   tb.innerHTML = `Rodada ${number}: vez de <strong>${esc(p?.name || '?')}</strong> ${p?.emoji || ''}`;
@@ -214,8 +217,26 @@ socket.on('round:start', async ({ number, turnPlayerId }) => {
 });
 
 socket.on('turn:placed', () => {
+  clearInterval(window._cd);
   $('#phase-status').textContent = 'Carta posicionada. Janela de contestacao aberta: usem o botao no celular.';
   FX.zoom($('#phase-status'));
+});
+
+// outro jogador acionou o cronometro de 30s
+socket.on('hurry:started', ({ seconds, byName, byEmoji }) => {
+  toast(`${byEmoji} ${byName} acionou o cronometro!`);
+  FX.flash('color-mix(in srgb, var(--hot) 35%, transparent)');
+  countdown($('#phase-status'), seconds, '⏱ Cronometro acionado! Tempo para jogar');
+});
+
+// palpite do jogador da vez exposto na tela junto do corte da musica
+socket.on('turn:guessed', ({ name, emoji, artist, title }) => {
+  const el = $('#turn-guess');
+  const parts = [];
+  if (title) parts.push(`"${title}"`);
+  if (artist) parts.push(`de ${artist}`);
+  el.textContent = `🎤 ${emoji} ${name} arriscou: ${parts.join(' ')}`;
+  el.classList.remove('hidden', 'slide-pop'); void el.offsetWidth; el.classList.add('slide-pop');
 });
 
 socket.on('contest:open', ({ seconds }) => {
@@ -260,9 +281,10 @@ socket.on('round:reveal', (results) => {
     ul.insertAdjacentHTML('beforeend',
       `<li class="${c.wins ? 'ok' : c.posOk ? '' : 'bad'}">${name(c.playerId)} contestou${c.tieBroken ? ' (sorteio)' : ''}: ${c.slot === null ? 'nao jogou' : c.posOk ? 'posicao correta' : 'posicao errada'}${c.wins ? ' e levou a carta!' : ''}</li>`);
   });
-  results.fichasGanhas.forEach(f => {
-    const what = f.title && f.artist ? 'musica e artista: +2 fichas' : f.title ? 'a musica: +1 ficha' : 'o artista: +1 ficha';
-    ul.insertAdjacentHTML('beforeend', `<li class="ok">${name(f.playerId)} acertou ${what}</li>`);
+  results.fichasGanhas.forEach((f, i) => {
+    const what = f.title && f.artist ? 'musica e artista: +2 fichas 🪙🪙' : f.title ? 'a musica: +1 ficha 🪙' : 'o artista: +1 ficha 🪙';
+    ul.insertAdjacentHTML('beforeend', `<li class="ok gain-line">${name(f.playerId)} acertou ${what}</li>`);
+    setTimeout(() => coinFly(f.playerId, f.total), 500 + i * 350);
   });
   $('#phase-status').textContent = '';
   panel.classList.remove('hidden');
@@ -377,29 +399,66 @@ function renderTurnLine(state) {
   $('#turn-line').innerHTML = cards.join('');
 }
 
+let lastRankOrder = [];
 function renderScoreboard(state) {
   const sb = $('#scoreboard');
   sb.innerHTML = '';
   const isTeams = state.config.modo === 'EQUIPES' && state.teams;
+  let rows;
   if (isTeams) {
-    Object.entries(state.teams).forEach(([team, t]) => {
-      sb.appendChild(scoreCard(`🏳 ${team}`, t.fichas, t.timeline, state.turnEntityId === team));
-    });
+    rows = Object.entries(state.teams).map(([team, t]) => ({
+      id: team, label: `🏳 ${team}`, fichas: t.fichas, timeline: t.timeline, isTurn: state.turnEntityId === team
+    }));
   } else {
-    [...state.players].sort((a, b) => b.cartas - a.cartas).forEach(p => {
-      sb.appendChild(scoreCard(`${p.emoji} ${p.name}${p.connected ? '' : ' (offline)'}`, p.fichas, p.timeline, state.turnPlayerId === p.id));
-    });
+    rows = state.players.map(p => ({
+      id: p.id, label: `${p.emoji} ${p.name}${p.connected ? '' : ' (offline)'}`,
+      fichas: p.fichas, timeline: p.timeline, isTurn: state.turnPlayerId === p.id
+    }));
   }
+  rows.sort((a, b) => b.timeline.length - a.timeline.length || b.fichas - a.fichas);
+
+  const newOrder = rows.map(r => r.id);
+  rows.forEach((r, i) => {
+    const prev = lastRankOrder.indexOf(r.id);
+    const movedUp = prev !== -1 && i < prev;   // subiu no ranking: animacao de ultrapassagem
+    sb.appendChild(scoreCard(r, i + 1, movedUp));
+  });
+  lastRankOrder = newOrder;
 }
 
-function scoreCard(label, fichas, timeline, isTurn) {
+function scoreCard(r, pos, movedUp) {
   const div = document.createElement('div');
-  div.className = 'score-card' + (isTurn ? ' turn' : '');
-  div.innerHTML = `<div class="score-head"><span>${esc(label)}</span>
-    <span class="fichas num">⛃ ${fichas} | ${timeline.length} cartas</span></div>
-    <div class="mini-timeline">${timeline.map(c =>
+  div.className = 'score-card' + (r.isTurn ? ' turn' : '') + (pos === 1 ? ' leader' : '') + (movedUp ? ' rank-up' : '');
+  div.dataset.pid = r.id;
+  div.innerHTML = `<div class="score-head">
+      <span class="pos-badge num">${pos === 1 ? '👑' : pos + 'º'}</span>
+      <span class="score-name">${esc(r.label)}</span>
+      <span class="fichas num">🪙 ${r.fichas} · ${r.timeline.length} cartas</span></div>
+    <div class="mini-timeline">${r.timeline.map(c =>
       `<span class="mini-card" style="--dec:${decColor(c.year)}" title="${esc(c.title)} (${c.year})">${String(c.year).slice(2)}</span>`).join('')}</div>`;
   return div;
+}
+
+// moeda dourada voa da revelacao ate o card do jogador no ranking
+function coinFly(playerId, total = 1) {
+  const target = document.querySelector(`.score-card[data-pid="${playerId}"]`)
+    || document.querySelector(`.score-card`);
+  if (!target) return;
+  const rect = target.getBoundingClientRect();
+  for (let i = 0; i < total; i++) {
+    const coin = document.createElement('span');
+    coin.className = 'coin-fly';
+    coin.textContent = '🪙';
+    coin.style.left = '50vw';
+    coin.style.top = '50vh';
+    coin.style.setProperty('--tx', `${rect.left + rect.width / 2 - innerWidth / 2}px`);
+    coin.style.setProperty('--ty', `${rect.top + rect.height / 2 - innerHeight / 2}px`);
+    coin.style.animationDelay = `${i * 180}ms`;
+    document.body.appendChild(coin);
+    setTimeout(() => coin.remove(), 1400 + i * 180);
+  }
+  setTimeout(() => { target.classList.add('gain'); FX.zoom(target); }, 900);
+  setTimeout(() => target.classList.remove('gain'), 2400);
 }
 
 function showEnd(winner) {
@@ -436,12 +495,18 @@ function showEnd(winner) {
 }
 
 // ---------------- reproducao ----------------
-async function playCurrentTrack(isReplay = false) {
+async function playCurrentTrack(isReplay = false, attempt = 0) {
   stopAudio();
   try {
+    // o servidor ja troca a faixa sozinho em caso de falha; aqui so retentamos
+    // a chamada algumas vezes sem alarde, para o jogador nunca ver erro
     const res = await fetch(`/api/resolve?sala=${ROOM}`);
     const info = await res.json();
-    if (info.error) { $('#phase-status').textContent = `Falha no audio: ${info.error}. Use "Pular rodada" se necessario.`; return; }
+    if (info.error) {
+      if (attempt < 3) return setTimeout(() => playCurrentTrack(isReplay, attempt + 1), 1200);
+      $('#phase-status').textContent = 'Preparando o som...';
+      return;
+    }
 
     showVinyl(true);
     const dur = (STATE?.config?.duracaoTrechoSeg || 30) * 1000;
@@ -461,8 +526,9 @@ async function playCurrentTrack(isReplay = false) {
     startProgress(dur);
     playTimer = setTimeout(() => stopAudio(), dur);
   } catch (e) {
-    $('#phase-status').textContent = 'Nao consegui tocar esta faixa. O host pode pular a rodada.';
+    if (attempt < 3) return setTimeout(() => playCurrentTrack(isReplay, attempt + 1), 1200);
     showVinyl(false);
+    $('#phase-status').textContent = 'Preparando o som...';
   }
 }
 

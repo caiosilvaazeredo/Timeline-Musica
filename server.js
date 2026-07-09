@@ -143,19 +143,42 @@ app.get('/api/spotify/token', async (req, res) => {
 // e devolve apenas a informacao de reproducao, nunca titulo/artista/ano antes da revelacao.
 const resolveCache = new Map(); // `${fonte}:${songId}` -> payload
 
+async function resolveOne(room, song) {
+  const fonte = room.config.fonte;
+  const cacheKey = `${fonte}:${song.id}`;
+  if (resolveCache.has(cacheKey)) return resolveCache.get(cacheKey);
+  const payload = await resolveSong(fonte, song, room.code);
+  resolveCache.set(cacheKey, payload);
+  return payload;
+}
+
 app.get('/api/resolve', async (req, res) => {
   const room = engine.getRoom(req.query.sala);
   if (!room || !room.round) return res.status(404).json({ error: 'Sala ou rodada inexistente.' });
-  const song = room.round.card;
-  const fonte = room.config.fonte;
-  const cacheKey = `${fonte}:${song.id}`;
-  if (resolveCache.has(cacheKey)) return res.json(resolveCache.get(cacheKey));
 
-  try {
+  // Se a faixa da rodada falhar (sem preview, sem video, sem match), troca
+  // silenciosamente por outra carta do baralho e tenta de novo, ate 6 vezes.
+  // O jogador nunca ve o erro: a rodada segue com a nova musica.
+  let lastError = null;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    try {
+      const payload = await resolveOne(room, room.round.card);
+      return res.json(payload);
+    } catch (e) {
+      lastError = e;
+      if (room.round.phase !== 'placing' || !room.deck.length) break;
+      room.round.card = room.deck.pop();   // troca a carta e mantem a rodada
+    }
+  }
+  res.status(502).json({ error: lastError?.message || 'Sem faixa disponivel.' });
+});
+
+async function resolveSong(fonte, song, roomCode) {
+  {
     let payload;
     if (fonte === 'SPOTIFY') {
-      const token = await spotifyAccessToken(room.code);
-      if (!token) return res.status(400).json({ error: 'Spotify nao conectado.' });
+      const token = await spotifyAccessToken(roomCode);
+      if (!token) throw new Error('Spotify nao conectado.');
       const q = encodeURIComponent(`track:${song.title} artist:${song.artist}`);
       const r = await fetch(`https://api.spotify.com/v1/search?q=${q}&type=track&limit=1`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -165,7 +188,7 @@ app.get('/api/resolve', async (req, res) => {
       if (!track) throw new Error('Faixa nao encontrada no Spotify.');
       payload = { type: 'spotify', uri: track.uri, durationMs: track.duration_ms };
     } else if (fonte === 'YOUTUBE') {
-      if (!YT_API_KEY) return res.status(400).json({ error: 'YT_API_KEY nao configurada.' });
+      if (!YT_API_KEY) throw new Error('YT_API_KEY nao configurada.');
       const q = encodeURIComponent(`${song.artist} ${song.title} official audio`);
       const r = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&maxResults=1&q=${q}&key=${YT_API_KEY}`);
       const data = await r.json();
@@ -186,25 +209,24 @@ app.get('/api/resolve', async (req, res) => {
       if (!hit?.preview) throw new Error('Preview nao encontrado.');
       payload = { type: 'preview', url: hit.preview };
     }
-    resolveCache.set(cacheKey, payload);
-    res.json(payload);
-  } catch (e) {
-    res.status(502).json({ error: e.message });
+    return payload;
   }
-});
+}
 
 // ---------------- Socket.io ----------------
 
-// Preset do Inicio Rapido: sem login, dificuldade equilibrada, pronto para a TV da sala
-const QUICK_PRESET = {
-  modo: 'ORIGINAL',
-  meta: 8,
-  fichasIniciais: 3,
-  fonte: 'PREVIEW',
-  duracaoTrechoSeg: 30,
-  maxContestacoes: 3,
-  filtros: { origem: 'AMBAS', billboardUS: false, billboardBR: false, decadaMin: 1950, decadaMax: 2020 }
-};
+// Presets do menu inicial: festa rapida sem login, pronta para a TV da sala
+function quickPreset(origem) {
+  return {
+    modo: 'ORIGINAL',
+    meta: 8,
+    fichasIniciais: 3,
+    fonte: 'PREVIEW',
+    duracaoTrechoSeg: 30,
+    maxContestacoes: 3,
+    filtros: { origem, billboardUS: false, billboardBR: false, decadaMin: 1950, decadaMax: 2020 }
+  };
+}
 
 function broadcast(room) {
   io.to(room.code).emit('state', engine.publicState(room));
@@ -226,9 +248,8 @@ function beginRound(room) {
     turnEntityId: round.turnEntityId
   });
   broadcast(room);
-  room.timers.placing = setTimeout(() => {
-    if (room.round?.phase === 'placing') { openGuessing(room); doReveal(room); }
-  }, engine.PLACING_TIMEOUT_MS);
+  // sem cronometro por padrao: o jogador da vez pensa a vontade;
+  // apos 15s, outro jogador pode acionar o cronometro de 30s (player:hurry)
 }
 
 function openContestWindow(room) {
@@ -268,7 +289,11 @@ io.on('connection', (socket) => {
   socket.on('tv:create', ({ quick, visibility } = {}, cb) => {
     const room = engine.createRoom(socket.id);
     room.visibility = visibility === 'public' ? 'public' : 'private';
-    if (quick) room.config = { ...room.config, ...QUICK_PRESET, filtros: { ...QUICK_PRESET.filtros } };
+    if (quick) {
+      const origem = quick === 'BR' ? 'BR' : 'AMBAS';   // 'BR' | 'MISTA' | true (compat)
+      const preset = quickPreset(origem);
+      room.config = { ...room.config, ...preset, filtros: { ...preset.filtros } };
+    }
     socket.join(room.code);
     socket.data.roomCode = room.code;
     socket.data.isTV = true;
@@ -400,6 +425,7 @@ io.on('connection', (socket) => {
     if (!room) return;
     const r = engine.placeTurnCard(room, socket.data.playerId, slot);
     if (r.error) return cb?.(r);
+    if (room.timers.placing) { clearTimeout(room.timers.placing); delete room.timers.placing; }
     io.to(room.code).emit('turn:placed', { playerId: socket.data.playerId });
     openContestWindow(room);
     cb?.({ ok: true });
@@ -435,8 +461,18 @@ io.on('connection', (socket) => {
     const r = engine.submitGuess(room, socket.data.playerId, guess || {});
     cb?.(r);
     if (r.ok) {
-      // jogador da vez respondeu: corta a musica na TV (dificulta contestacoes)
-      if (r.stopMusic) io.to(room.tvSocketId).emit('playback:stop');
+      // jogador da vez respondeu: corta a musica e o palpite dele aparece na TV
+      if (r.stopMusic) {
+        io.to(room.tvSocketId).emit('playback:stop');
+        const g = room.round?.guesses[socket.data.playerId];
+        const who = room.players.find(p => p.id === socket.data.playerId);
+        if (g && (g.artist || g.title)) {
+          io.to(room.code).emit('turn:guessed', {
+            name: who?.name || '', emoji: who?.emoji || '',
+            artist: g.artist || '', title: g.title || ''
+          });
+        }
+      }
       // se todos os elegiveis ja palpitaram na janela de palpites, revela na hora
       if (room.round?.phase === 'guessing' && engine.allEligibleGuessed(room)) doReveal(room);
     }
@@ -449,6 +485,24 @@ io.on('connection', (socket) => {
     if (socket.data.playerId === room.round.turnPlayerId && room.round.contests.every(c => c.slot !== null)) {
       doReveal(room);
     }
+  });
+
+  // outro jogador pede pressa: cronometro de 30s so depois de 15s de rodada
+  socket.on('player:hurry', (cb) => {
+    const room = engine.getRoom(socket.data.roomCode);
+    const r = room?.round;
+    if (!room || room.state !== 'playing' || !r || r.phase !== 'placing') return cb?.({ error: 'Fora de hora.' });
+    if (socket.data.playerId === r.turnPlayerId) return cb?.({ error: 'Voce e o jogador da vez.' });
+    if (r.hurry) return cb?.({ error: 'O cronometro ja esta rodando.' });
+    if (Date.now() - r.startedAt < engine.HURRY_AFTER_MS) return cb?.({ error: 'Aguarde 15 segundos antes de apressar.' });
+    r.hurry = true;
+    const by = room.players.find(p => p.id === socket.data.playerId);
+    io.to(room.code).emit('hurry:started', { seconds: engine.HURRY_COUNTDOWN_MS / 1000, byName: by?.name || '', byEmoji: by?.emoji || '' });
+    broadcast(room);
+    room.timers.placing = setTimeout(() => {
+      if (room.round?.phase === 'placing') { openGuessing(room); doReveal(room); }
+    }, engine.HURRY_COUNTDOWN_MS);
+    cb?.({ ok: true });
   });
 
   // o proximo jogador da vez inicia a rodada do proprio celular

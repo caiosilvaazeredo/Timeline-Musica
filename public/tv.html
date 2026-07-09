@@ -17,15 +17,20 @@
     <p class="mc-sub">Como voce quer comecar?</p>
 
     <div class="mc-cards">
-      <button id="mc-quick" class="mc-card mc-quick">
-        <span class="mc-icon">⚡</span>
-        <span class="mc-name">Inicio Rapido</span>
-        <span class="mc-desc">Sem login, sem ajustes. Aponta o QR e joga em segundos.</span>
+      <button id="mc-quick-mista" class="mc-card mc-quick" data-quick="MISTA">
+        <span class="mc-icon">🎉</span>
+        <span class="mc-name">Festa Rapida</span>
+        <span class="mc-desc">Brasileiras + internacionais. Sem login, sem ajustes: QR na tela em segundos.</span>
+      </button>
+      <button id="mc-quick-br" class="mc-card mc-quick" data-quick="BR">
+        <span class="mc-icon">🇧🇷</span>
+        <span class="mc-name">Festa Brasileira</span>
+        <span class="mc-desc">So musicas brasileiras, de Pixinguinha ao funk. Pronta na hora.</span>
       </button>
       <button id="mc-custom" class="mc-card mc-custom">
         <span class="mc-icon">🎛️</span>
         <span class="mc-name">Sala Personalizada</span>
-        <span class="mc-desc">Escolha modo, fonte de musica, repertorio e mais.</span>
+        <span class="mc-desc">Escolha modo, fonte de musica, repertorio e regras.</span>
       </button>
     </div>
 
@@ -152,6 +157,7 @@
     <div class="stage-main">
       <div id="turn-banner" class="turn-banner"></div>
       <div id="phase-status" class="phase-status"></div>
+      <div id="turn-guess" class="turn-guess hidden"></div>
 
       <!-- linha do tempo do jogador da vez, visivel para toda a sala -->
       <div id="turn-line-wrap" class="turn-line-wrap hidden">

@@ -15,7 +15,7 @@ let iPlacedContest = false;
 let iGuessed = false;
 
 // ---------------- entrada ----------------
-const EMOJIS = ['🎸','🎤','🎧','🥁','🎺','🎻','🪩','📻','🎹','🎷','🕺','💃'];
+const EMOJIS = ['🎸','🎤','🎧','🥁','🎺','🎻','🪩','📻','🎹','🎷','🕺','💃','🎩','🦜','🐆','🦈','🐙','🦊','🍕','🌵','🚀','⚡','🔥','👽'];
 const grid = $('#emoji-grid');
 EMOJIS.forEach((e, i) => {
   const b = document.createElement('button');
@@ -141,13 +141,25 @@ function syncPhase(state) {
   if (state.phase === 'placing') {
     if (isMyTurn && placingAs !== 'turn') {
       FX.vibrate([60, 80, 60]);
-      openPlacer('turn', 'Sua vez! Onde essa musica entra na sua linha do tempo?');
+      openPlacer('turn', 'Sua vez! Sem pressa: o cronometro so liga se alguem apressar depois de 15s.');
     }
     if (!isMyTurn) {
       const t = state.players.find(x => x.id === state.turnPlayerId);
       status(`🎶 Vez de ${t?.name || '...'}. Contestar libera quando a carta for posicionada.`, '');
       hidePlacer();
+      // apos 15s da rodada, libera o botao de apressar (se ninguem acionou ainda)
+      clearTimeout(window._hurryTimer);
+      if (!state.hurryActive && state.roundStartedAt) {
+        const waitMs = Math.max(0, 15000 - (Date.now() - state.roundStartedAt));
+        window._hurryTimer = setTimeout(() => {
+          if (STATE?.phase === 'placing' && !STATE.hurryActive) show('#btn-hurry', true);
+        }, waitMs);
+      }
+      if (state.hurryActive) show('#btn-hurry', false);
     }
+  } else {
+    show('#btn-hurry', false);
+    clearTimeout(window._hurryTimer);
   }
 
   if (state.phase === 'contest' && !iContested && !isMyTurn) {
@@ -173,6 +185,10 @@ socket.on('round:start', () => {
   selectedSlot = null; placingAs = null; iContested = false; iPlacedContest = false; iGuessed = false;
   hideAll();
   show('#p-reveal', false);
+  show('#btn-hurry', false);
+  clearTimeout(window._hurryTimer);
+  // limpa o que sobrou do palpite da musica anterior
+  $('#guess-artist').value = ''; $('#guess-title').value = ''; $('#guess-year').value = '';
 });
 
 socket.on('contest:new', ({ playerId }) => {
@@ -353,6 +369,23 @@ $('#btn-start-round').addEventListener('click', () => {
 });
 
 $('#btn-replay').addEventListener('click', () => socket.emit('player:replay'));
+
+$('#btn-hurry').addEventListener('click', () => {
+  show('#btn-hurry', false);
+  socket.emit('player:hurry', (res) => {
+    if (res?.error) status(res.error, 'hot');
+    else { FX.vibrate(30); status('⏱ Cronometro de 30s acionado!', 'hot'); }
+  });
+});
+
+socket.on('hurry:started', ({ byName, byEmoji }) => {
+  show('#btn-hurry', false);
+  if (STATE?.turnPlayerId === ME.playerId) {
+    FX.vibrate([80, 60, 80]);
+    FX.flash('color-mix(in srgb, var(--hot) 40%, transparent)');
+    status(`⏱ ${byEmoji} ${byName} acionou o cronometro: 30 segundos!`, 'hot');
+  }
+});
 
 document.querySelectorAll('.reactions button').forEach(b =>
   b.addEventListener('click', () => socket.emit('player:reaction', { emoji: b.dataset.r })));

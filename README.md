@@ -6,7 +6,8 @@ Jogo de festa multiplayer de linha do tempo musical (inspirado no classico Hitst
 
 Ao abrir `/tv`, o host escolhe entre:
 
-- **Inicio Rapido**: sem login, sem configuracao. Preset equilibrado (Original, meta 8, trecho de 30s via Deezer) e o QR ja aparece em segundos, pronto pra colocar na TV da sala.
+- **Festa Rapida**: brasileiras + internacionais, sem login e sem configuracao. Preset equilibrado (Original, meta 8, trecho de 30s via Deezer) com o QR na tela em segundos.
+- **Festa Brasileira**: mesmo preset, so com musicas brasileiras.
 - **Sala Personalizada**: o painel completo de modo, fonte de musica, repertorio e regras.
 
 Em qualquer um dos dois, a sala pode ser **privada** (so quem tem o codigo entra) ou **publica** (aparece na lista de salas abertas da pagina inicial, estilo Gartic, para qualquer visitante entrar sem digitar codigo). O host alterna isso a qualquer momento no lobby pelo botao de visibilidade.
@@ -19,12 +20,14 @@ O QR code e o atalho de entrada usam sempre a URL real que a TV esta servindo na
 2. O host configura a partida na propria TV: modo, meta, fichas, fonte de musica e filtros de repertorio.
 3. Os jogadores escaneiam o QR code com o celular, escolhem nome e avatar e entram no lobby.
 4. Ao iniciar, cada jogador recebe uma carta inicial. A cada rodada a TV fica preta com o vinil dourado girando enquanto o trecho toca.
-5. O jogador da vez posiciona a carta na propria linha do tempo pelo celular. Depois que ele joga, o botao CONTESTAR libera para os demais.
-6. Quem contesta gasta 1 ficha e e obrigado a posicionar a carta na propria linha. Ate N jogadores podem contestar a mesma carta (configuravel). Cliques simultaneos (janela de 400ms) vao a sorteio, e a ordem define quem tem prioridade sobre a carta.
-7. Durante a rodada a TV exibe a linha do tempo do jogador da vez, e a carta misteriosa pulsa no intervalo que ele escolheu assim que posiciona: toda a sala acompanha a jogada.
-8. Na revelacao a TV mostra ano, musica, interprete mais conhecido e autor original. Acertar a musica rende +1 ficha e acertar o artista/autor rende +1 ficha (ate 2 por rodada). A comparacao e tolerante a erros de escrita: "bohemian rapsody", "quen" ou so "jobim" contam como acerto.
-9. Apos a revelacao, quem inicia a proxima rodada e o proprio proximo jogador, pelo celular; a TV exibe "Aguardando X iniciar a proxima rodada" (o host mantem um botao de forcar, se precisar).
-10. Vence quem atingir a meta de cartas (padrao 10).
+5. O jogador da vez posiciona a carta na propria linha do tempo pelo celular, sem cronometro por padrao: apos 15 segundos, qualquer outro jogador pode acionar um cronometro de 30s (minimo garantido de 45s para pensar). Se ele arriscar artista e musica, a musica e cortada na hora e o palpite dele aparece na TV para todos.
+6. Depois que ele joga, o botao CONTESTAR libera para os demais por 30 segundos.
+7. Quem contesta gasta 1 ficha e e obrigado a posicionar a carta na propria linha. Ate N jogadores podem contestar a mesma carta (configuravel). Cliques simultaneos (janela de 400ms) vao a sorteio, e a ordem define quem tem prioridade sobre a carta.
+8. Durante a rodada a TV exibe a linha do tempo do jogador da vez, e a carta misteriosa pulsa no intervalo que ele escolheu assim que posiciona: toda a sala acompanha a jogada.
+9. Na revelacao a TV mostra ano, musica, interprete mais conhecido e autor original. Acertar a musica rende +1 ficha e acertar o artista/autor rende +1 ficha (ate 2 por rodada). A comparacao e tolerante a erros de escrita: "bohemian rapsody", "quen" ou so "jobim" contam como acerto.
+10. Apos a revelacao, quem inicia a proxima rodada e o proprio proximo jogador, pelo celular; a TV exibe "Aguardando X iniciar a proxima rodada" (o host mantem um botao de forcar, se precisar).
+11. O revezamento de turnos segue a ordem fixa de entrada na sala: contestar ou vencer cartas nunca muda de quem e a proxima vez. Se uma faixa falhar na reproducao, o servidor troca por outra do baralho silenciosamente.
+12. Vence quem atingir a meta de cartas (padrao 10).
 
 ## Modos
 

@@ -5,8 +5,9 @@ const { matchArtist, matchTitle } = require('./match');
 
 const MAX_PLAYERS = 8;
 const CONTEST_TIE_WINDOW_MS = 400;   // contestacoes dentro desta janela empatam e vao a sorteio
-const PLACING_TIMEOUT_MS = 60000;
-const CONTEST_WINDOW_MS = 15000;
+const HURRY_AFTER_MS = 15000;        // apos 15s outro jogador pode acionar o cronometro
+const HURRY_COUNTDOWN_MS = 30000;    // cronometro de apressar: 30s (minimo garantido: 45s)
+const CONTEST_WINDOW_MS = 30000;   // conta apenas depois da jogada do jogador da vez
 const GUESS_WINDOW_MS = 30000;
 
 const rooms = new Map();
@@ -139,6 +140,7 @@ function startGame(room) {
   room.state = 'playing';
   room.roundCount = 0;
   room.turnIndex = -1;
+  room.turnOrder = active.map(p => p.id);   // ordem fixa: garante revezamento justo
   room.winner = null;
   return { ok: true };
 }
@@ -161,8 +163,19 @@ function nextTurnPlayer(room) {
     const controller = members[room.roundCount % members.length];
     return { entityId: team, player: controller };
   }
-  room.turnIndex = (room.turnIndex + 1) % active.length;
-  const p = active[room.turnIndex];
+  // revezamento pela ordem fixa da partida, pulando desconectados:
+  // contestar, vencer carta ou qualquer outra acao nao altera a vez
+  const activeIds = new Set(active.map(p => p.id));
+  if (!room.turnOrder?.length) room.turnOrder = active.map(p => p.id);
+  for (let i = 0; i < room.turnOrder.length; i++) {
+    room.turnIndex = (room.turnIndex + 1) % room.turnOrder.length;
+    const pid = room.turnOrder[room.turnIndex];
+    if (activeIds.has(pid)) {
+      const p = active.find(x => x.id === pid);
+      return { entityId: p.id, player: p };
+    }
+  }
+  const p = active[0];
   return { entityId: p.id, player: p };
 }
 
@@ -178,7 +191,13 @@ function peekNextTurn(room) {
     if (!members.length) return null;
     return members[(room.roundCount + 1) % members.length];
   }
-  return active[(room.turnIndex + 1) % active.length];
+  const activeIds = new Set(active.map(p => p.id));
+  const order = room.turnOrder?.length ? room.turnOrder : active.map(p => p.id);
+  for (let i = 1; i <= order.length; i++) {
+    const pid = order[(room.turnIndex + i) % order.length];
+    if (activeIds.has(pid)) return active.find(x => x.id === pid);
+  }
+  return active[0];
 }
 
 function startRound(room) {
@@ -188,6 +207,8 @@ function startRound(room) {
   const card = room.deck.pop();
   room.round = {
     number: room.roundCount,
+    startedAt: Date.now(),
+    hurry: false,
     card,
     turnEntityId: entityId,
     turnPlayerId: player.id,
@@ -393,6 +414,8 @@ function publicState(room) {
     turnEntityId: room.round?.turnEntityId || null,
     turnPlaced: room.round ? room.round.turnPlacement !== null : false,
     turnPlacementSlot: room.round ? room.round.turnPlacement : null,
+    roundStartedAt: room.round?.startedAt || null,
+    hurryActive: Boolean(room.round?.hurry),
     nextTurnPlayerId: room.state === 'playing' && room.round?.phase === 'reveal' ? (peekNextTurn(room)?.id || null) : null,
     contests: room.round ? room.round.contests.map(c => ({ playerId: c.playerId, entityId: c.entityId, placed: c.slot !== null, tieBroken: c.tieBroken })) : [],
     deckLeft: room.deck.length,
@@ -434,5 +457,5 @@ module.exports = {
   rooms, createRoom, getRoom, addPlayer, startGame, startRound,
   placeTurnCard, requestContest, placeContestCard, submitGuess, allEligibleGuessed, reveal,
   publicState, timelineOf, removeRoom, entities, listPublicRooms, peekNextTurn,
-  PLACING_TIMEOUT_MS, CONTEST_WINDOW_MS, GUESS_WINDOW_MS, MAX_PLAYERS
+  HURRY_AFTER_MS, HURRY_COUNTDOWN_MS, CONTEST_WINDOW_MS, GUESS_WINDOW_MS, MAX_PLAYERS
 };

@@ -45,7 +45,7 @@ app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.get('/api/songs/stats', (req, res) => res.json(stats()));
 app.get('/api/features', (req, res) => res.json({
   spotify: Boolean(SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET),
-  youtube: Boolean(YT_API_KEY),
+  youtube: true,   // busca publica sem chave; YT_API_KEY (opcional) so melhora a precisao
   preview: true,
   baseUrl: resolveBaseUrl(req)
 }));
@@ -173,6 +173,38 @@ app.get('/api/resolve', async (req, res) => {
   res.status(502).json({ error: lastError?.message || 'Sem faixa disponivel.' });
 });
 
+// Busca um video no YouTube sem exigir chave de API: le a propria pagina publica
+// de resultados de busca (nenhum login, nenhuma chave, igual a qualquer visitante veria).
+// Se YT_API_KEY estiver configurada, ela e tentada primeiro por ser mais confiavel;
+// sem chave, cai automaticamente neste modo publico.
+async function youtubeSearchNoKey(query) {
+  const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+  const r = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8'
+    }
+  });
+  if (!r.ok) throw new Error('Falha ao consultar o YouTube.');
+  const html = await r.text();
+  const m = html.match(/"videoRenderer":\{"videoId":"([a-zA-Z0-9_-]{11})"/) || html.match(/watch\?v=([a-zA-Z0-9_-]{11})/);
+  if (!m) throw new Error('Video nao encontrado no YouTube.');
+  return m[1];
+}
+
+async function findYoutubeVideoId(song) {
+  const q = `${song.artist} ${song.title} official audio`;
+  if (YT_API_KEY) {
+    try {
+      const r = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&maxResults=1&q=${encodeURIComponent(q)}&key=${YT_API_KEY}`);
+      const data = await r.json();
+      const vid = data.items?.[0]?.id?.videoId;
+      if (vid) return vid;
+    } catch { /* cai para a busca publica abaixo */ }
+  }
+  return youtubeSearchNoKey(q);
+}
+
 async function resolveSong(fonte, song, roomCode) {
   {
     let payload;
@@ -188,12 +220,7 @@ async function resolveSong(fonte, song, roomCode) {
       if (!track) throw new Error('Faixa nao encontrada no Spotify.');
       payload = { type: 'spotify', uri: track.uri, durationMs: track.duration_ms };
     } else if (fonte === 'YOUTUBE') {
-      if (!YT_API_KEY) throw new Error('YT_API_KEY nao configurada.');
-      const q = encodeURIComponent(`${song.artist} ${song.title} official audio`);
-      const r = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&maxResults=1&q=${q}&key=${YT_API_KEY}`);
-      const data = await r.json();
-      const vid = data.items?.[0]?.id?.videoId;
-      if (!vid) throw new Error('Video nao encontrado no YouTube.');
+      const vid = await findYoutubeVideoId(song);
       payload = { type: 'youtube', videoId: vid };
     } else {
       // PREVIEW: Deezer, 30 segundos, sem login e sem chave
@@ -234,7 +261,7 @@ function quickPreset(id) {
     meta: 8,
     fichasIniciais: p.modo === 'PRO' ? 5 : 3,
     fonte: 'PREVIEW',
-    duracaoTrechoSeg: 60,
+    duracaoTrechoSeg: 30,
     maxContestacoes: 3,
     filtros: { origem: p.origem, billboardUS: false, billboardBR: false, decadaMin: 1950, decadaMax: 2020 }
   };

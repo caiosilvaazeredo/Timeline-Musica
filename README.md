@@ -26,7 +26,7 @@ O QR code e o atalho de entrada usam sempre a URL real que a TV esta servindo na
 2. O host configura a partida na propria TV: modo, meta, fichas, fonte de musica e filtros de repertorio.
 3. Os jogadores escaneiam o QR code com o celular, escolhem nome e avatar e entram no lobby.
 4. Ao iniciar, cada jogador recebe uma carta inicial. A cada rodada a TV fica preta com o vinil dourado girando enquanto o trecho toca.
-5. O jogador da vez posiciona a carta na propria linha do tempo pelo celular, sem cronometro por padrao: apos 15 segundos, qualquer outro jogador pode acionar um cronometro de 30s (minimo garantido de 45s para pensar). Se ele arriscar artista e musica, a musica e cortada na hora e o palpite dele aparece na TV para todos. Cada trecho toca por 1 minuto por padrao (configuravel); previews de 30s (Deezer) repetem em loop ate completar o tempo.
+5. O jogador da vez posiciona a carta na propria linha do tempo pelo celular, sem cronometro por padrao: apos 15 segundos, qualquer outro jogador pode acionar um cronometro de 30s (minimo garantido de 45s para pensar). Se ele arriscar artista e musica, a musica e cortada na hora e o palpite dele aparece na TV para todos. Cada trecho toca por 30 segundos por padrao (configuravel ate 90s; previews de 30s do Deezer repetem em loop se voce aumentar a duracao).
 6. Depois que ele joga, o botao CONTESTAR libera para os demais por 30 segundos.
 7. Quem contesta gasta 1 ficha e e obrigado a posicionar a carta na propria linha. Ate N jogadores podem contestar a mesma carta (configuravel). Cliques simultaneos (janela de 400ms) vao a sorteio, e a ordem define quem tem prioridade sobre a carta.
 8. Durante a rodada a TV exibe a linha do tempo do jogador da vez, e a carta misteriosa pulsa no intervalo que ele escolheu assim que posiciona: toda a sala acompanha a jogada.
@@ -47,13 +47,20 @@ O QR code e o atalho de entrada usam sempre a URL real que a TV esta servindo na
 
 ## Fontes de musica
 
-| Fonte | Login | Requisito |
+| Fonte | Login do jogador | Configuracao do servidor |
 |---|---|---|
-| Trecho 30s (Deezer) | Nenhum | Nenhum, funciona de imediato |
-| Spotify | Conta Premium de um jogador (OAuth na TV) | `SPOTIFY_CLIENT_ID` e `SPOTIFY_CLIENT_SECRET` |
-| YouTube | Nenhum | `YT_API_KEY` (YouTube Data API v3) |
+| Trecho 30s (Deezer) | Nenhum | Nenhuma, funciona de imediato |
+| YouTube | Nenhum (o video toca embutido, sem precisar de conta) | Nenhuma; a busca do video usa a propria pagina publica de resultados do YouTube. Se quiser mais precisao, uma `YT_API_KEY` opcional (YouTube Data API v3) e tentada primeiro |
+| Spotify | Login normal na conta Premium (tela oficial do Spotify, no celular ou na TV) | `SPOTIFY_CLIENT_ID` e `SPOTIFY_CLIENT_SECRET`: um cadastro **unico**, feito por quem hospeda o jogo, nunca pelos jogadores |
 
-O servidor resolve a faixa em tempo de execucao (busca por artista + titulo na API escolhida) e entrega para a TV apenas a informacao de reproducao, sem revelar os metadados antes da hora.
+O servidor resolve a faixa em tempo de execucao (busca por artista + titulo na fonte escolhida) e entrega para a TV apenas a informacao de reproducao, sem revelar os metadados antes da hora.
+
+### Sobre exigir "chave de API"
+
+Nenhum jogador precisa cadastrar nada em lugar nenhum. A distincao que importa:
+
+- **YouTube** nao pede login nem chave: assistir a um video publico incorporado nunca exigiu conta, e a busca do video certo usa a mesma pagina de resultados que qualquer visitante veria, sem autenticacao.
+- **Spotify** e diferente por natureza: tocar a musica **completa** exige uma conta Premium logada de verdade (a tela que abre e a tela oficial de login do proprio Spotify, no navegador do jogador ou da TV). O que fica configuravel apenas uma vez, pelo host do servidor, e o cadastro do aplicativo Vitrola junto ao Spotify (`SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET`); isso e uma exigencia do proprio Spotify para qualquer integracao (Discord, Shazam etc. fazem o mesmo), leva uns 2 minutos em https://developer.spotify.com/dashboard, e depois disso qualquer jogador so precisa clicar e logar normalmente, sem nunca ver ou digitar chave nenhuma.
 
 ## Repertorio e filtros
 

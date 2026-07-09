@@ -94,6 +94,30 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
+:root { --ui-scale: 1; }
+
+/* Tudo escala junto (zoom preserva layout e cliques corretamente),
+   exceto a propria faixa de controle, que fica de fora para nao encolher junto */
+body > *:not(#ui-scale-bar) { zoom: var(--ui-scale); }
+
+#ui-scale-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 500;
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  background: color-mix(in srgb, var(--ink) 88%, transparent);
+  backdrop-filter: blur(6px);
+  border-top: 1px solid rgba(244,232,207,.12);
+  padding: 8px 16px;
+  font-family: var(--font-body);
+}
+#ui-scale-bar button {
+  background: var(--ink-2); color: var(--cream); border: 1px solid rgba(244,232,207,.2);
+  border-radius: 8px; padding: 6px 12px; font-size: .95rem; font-weight: 700; min-width: 40px;
+}
+#ui-scale-bar button:hover { border-color: var(--gold); color: var(--gold); }
+#ui-scale-range { width: min(220px, 40vw); accent-color: var(--gold); }
+#ui-scale-pct { color: var(--gold); font-size: .85rem; min-width: 42px; text-align: center; }
+/* deixa um respiro no rodape do conteudo para a faixa nao cobrir botoes importantes */
+body { padding-bottom: 44px; }
 body {
   background:
     radial-gradient(1200px 700px at 80% -10%, var(--glow), transparent 60%),
@@ -160,9 +184,11 @@ input, select {
   display: grid; place-items: center;
   text-align: center;
   font-family: var(--font-display);
-  font-weight: 900;
-  font-size: calc(var(--size) * .066);
+  font-weight: 700;
+  font-size: calc(var(--size) * .052);
+  letter-spacing: calc(var(--size) * .008);
   line-height: 1.25;
+  padding-left: calc(var(--size) * .012); /* compensa o letter-spacing para centralizar de verdade */
 }
 .vinyl::after { /* furo central */
   content: '';

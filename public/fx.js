@@ -2,7 +2,53 @@
 (function () {
   const layer = document.createElement('div');
   layer.id = 'fx-flash';
-  document.addEventListener('DOMContentLoaded', () => document.body.appendChild(layer));
+
+  // ---------------- faixa inferior de tamanho da interface ----------------
+  // Ajusta o tamanho de tudo na tela (util pra TV longe do sofa ou celular pequeno).
+  // Persiste por aparelho (localStorage: o tamanho de tela e do aparelho, faz sentido lembrar).
+  const SCALE_KEY = 'vitrola_ui_scale';
+  const SCALE_MIN = 0.75, SCALE_MAX = 1.6, SCALE_STEP = 0.05;
+
+  function applyScale(v) {
+    document.documentElement.style.setProperty('--ui-scale', v);
+    const pct = document.getElementById('ui-scale-pct');
+    if (pct) pct.textContent = Math.round(v * 100) + '%';
+  }
+
+  function buildScaleBar() {
+    if (document.getElementById('ui-scale-bar')) return;
+    const bar = document.createElement('div');
+    bar.id = 'ui-scale-bar';
+    bar.innerHTML = `
+      <button type="button" id="ui-scale-down" aria-label="Diminuir tamanho">A−</button>
+      <input type="range" id="ui-scale-range" min="${SCALE_MIN}" max="${SCALE_MAX}" step="${SCALE_STEP}" value="1">
+      <span id="ui-scale-pct" class="num">100%</span>
+      <button type="button" id="ui-scale-up" aria-label="Aumentar tamanho">A+</button>
+    `;
+    document.body.appendChild(bar);
+
+    let saved = parseFloat(localStorage.getItem(SCALE_KEY));
+    if (!saved || isNaN(saved)) saved = 1;
+    saved = Math.min(SCALE_MAX, Math.max(SCALE_MIN, saved));
+    bar.querySelector('#ui-scale-range').value = saved;
+    applyScale(saved);
+
+    const range = bar.querySelector('#ui-scale-range');
+    function set(v) {
+      v = Math.min(SCALE_MAX, Math.max(SCALE_MIN, v));
+      range.value = v;
+      applyScale(v);
+      localStorage.setItem(SCALE_KEY, v);
+    }
+    range.addEventListener('input', () => set(parseFloat(range.value)));
+    bar.querySelector('#ui-scale-down').addEventListener('click', () => set(parseFloat(range.value) - SCALE_STEP));
+    bar.querySelector('#ui-scale-up').addEventListener('click', () => set(parseFloat(range.value) + SCALE_STEP));
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.body.appendChild(layer);
+    buildScaleBar();
+  });
 
   function themeVar(name) {
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();

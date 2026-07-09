@@ -140,7 +140,10 @@ function updateFonteStatus() {
     el.textContent = 'Pronto: trechos de 30 segundos via Deezer, nenhum login necessario.';
     el.classList.add('ok');
   } else if (fonte === 'SPOTIFY') {
-    if (!FEATURES.spotify) { el.textContent = 'Configure SPOTIFY_CLIENT_ID e SPOTIFY_CLIENT_SECRET no servidor.'; el.classList.add('warn'); }
+    if (!FEATURES.spotify) {
+      el.innerHTML = 'Quem hospeda o servidor precisa cadastrar 1 app gratis no Spotify (2 minutos, feito uma unica vez). Os jogadores nunca digitam chave nenhuma, so fazem login normal. Veja o README (SPOTIFY_CLIENT_ID).';
+      el.classList.add('warn');
+    }
     else if (connected) {
       el.textContent = 'Spotify conectado e pronto para tocar.'; el.classList.add('ok');
       if (STATE?.spotifyConnected && !spotifyReady) initSpotifySDK();
@@ -157,8 +160,7 @@ function updateFonteStatus() {
       }
     }
   } else if (fonte === 'YOUTUBE') {
-    if (!FEATURES.youtube) { el.textContent = 'Configure YT_API_KEY no servidor para usar o YouTube.'; el.classList.add('warn'); }
-    else { el.textContent = 'YouTube pronto. O audio toca direto na TV, sem login.'; el.classList.add('ok'); ensureYouTube(); }
+    el.textContent = 'Pronto: busca automatica no YouTube, sem login e sem chave de API.'; el.classList.add('ok'); ensureYouTube();
   }
 }
 
@@ -521,7 +523,7 @@ async function playCurrentTrack(isReplay = false, attempt = 0) {
     }
 
     showVinyl(true);
-    const dur = (STATE?.config?.duracaoTrechoSeg || 60) * 1000;
+    const dur = (STATE?.config?.duracaoTrechoSeg || 30) * 1000;
 
     if (info.type === 'preview') {
       // o preview do Deezer dura uns 30s; se a duracao configurada for maior,

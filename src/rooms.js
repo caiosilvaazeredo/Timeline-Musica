@@ -25,7 +25,7 @@ const DEFAULT_CONFIG = {
   meta: 10,                    // cartas para vencer
   fichasIniciais: 2,           // PRO usa 5 por padrao (ajustado no start se nao alterado)
   fonte: 'PREVIEW',            // SPOTIFY | YOUTUBE | PREVIEW (Deezer 30s, sem login)
-  duracaoTrechoSeg: 60,
+  duracaoTrechoSeg: 30,
   maxContestacoes: 3,          // quantos jogadores podem contestar a mesma carta
   filtros: {
     origem: 'AMBAS',           // BR | INTL | AMBAS

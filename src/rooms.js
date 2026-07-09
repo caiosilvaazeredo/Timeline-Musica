@@ -25,7 +25,7 @@ const DEFAULT_CONFIG = {
   meta: 10,                    // cartas para vencer
   fichasIniciais: 2,           // PRO usa 5 por padrao (ajustado no start se nao alterado)
   fonte: 'PREVIEW',            // SPOTIFY | YOUTUBE | PREVIEW (Deezer 30s, sem login)
-  duracaoTrechoSeg: 30,
+  duracaoTrechoSeg: 60,
   maxContestacoes: 3,          // quantos jogadores podem contestar a mesma carta
   filtros: {
     origem: 'AMBAS',           // BR | INTL | AMBAS
@@ -52,7 +52,8 @@ function createRoom(tvSocketId) {
     turnIndex: -1,
     winner: null,
     timers: {},
-    log: []
+    log: [],
+    playedIds: new Set()   // historico da sessao: nenhuma musica repete enquanto a sala existir
   };
   rooms.set(room.code, room);
   return room;
@@ -123,10 +124,19 @@ function startGame(room) {
     teams.forEach(t => { room.teams[t] = { timeline: [], fichas: room.config.fichasIniciais }; });
   }
 
-  room.deck = buildDeck(room.config.filtros);
   const entidades = entities(room);
-  if (room.deck.length < room.config.meta * entidades.length + 20) {
-    return { error: `Baralho insuficiente para estes filtros (${room.deck.length} musicas). Afrouxe os filtros ou reduza a meta.` };
+  const needed = room.config.meta * entidades.length + 20;
+  room.deck = buildDeck(room.config.filtros, room.playedIds);
+  let historyReset = false;
+  if (room.deck.length < needed) {
+    // repertorio filtrado + historico da sessao nao cobre a partida: reinicia so o
+    // historico (permite repetir musicas ja tocadas em rodadas anteriores desta sala)
+    room.playedIds.clear();
+    room.deck = buildDeck(room.config.filtros);
+    historyReset = true;
+    if (room.deck.length < needed) {
+      return { error: `Baralho insuficiente para estes filtros (${room.deck.length} musicas). Afrouxe os filtros ou reduza a meta.` };
+    }
   }
 
   // fichas iniciais (PRO: 5 por padrao, conforme regra oficial)
@@ -135,14 +145,22 @@ function startGame(room) {
   Object.values(room.teams).forEach(t => { t.fichas = fichas; t.timeline = []; });
 
   // carta inicial gratuita para cada jogador/equipe
-  entidades.forEach(eid => insertCard(timelineOf(room, eid), room.deck.pop()));
+  entidades.forEach(eid => insertCard(timelineOf(room, eid), drawCard(room)));
 
   room.state = 'playing';
   room.roundCount = 0;
   room.turnIndex = -1;
   room.turnOrder = active.map(p => p.id);   // ordem fixa: garante revezamento justo
   room.winner = null;
-  return { ok: true };
+  return { ok: true, historyReset };
+}
+
+// Retira uma carta do baralho e marca no historico da sessao, para nunca repetir
+// enquanto a sala existir (mesmo apos revanches)
+function drawCard(room) {
+  const card = room.deck.pop();
+  if (card) room.playedIds.add(card.id);
+  return card;
 }
 
 // entidades pontuadoras: jogadores, ou nomes de equipe no modo EQUIPES
@@ -204,7 +222,7 @@ function startRound(room) {
   if (!room.deck.length) { room.state = 'ended'; room.winner = leader(room); return null; }
   room.roundCount++;
   const { entityId, player } = nextTurnPlayer(room);
-  const card = room.deck.pop();
+  const card = drawCard(room);
   room.round = {
     number: room.roundCount,
     startedAt: Date.now(),
@@ -456,6 +474,6 @@ function listPublicRooms() {
 module.exports = {
   rooms, createRoom, getRoom, addPlayer, startGame, startRound,
   placeTurnCard, requestContest, placeContestCard, submitGuess, allEligibleGuessed, reveal,
-  publicState, timelineOf, removeRoom, entities, listPublicRooms, peekNextTurn,
+  publicState, timelineOf, removeRoom, entities, listPublicRooms, peekNextTurn, drawCard,
   HURRY_AFTER_MS, HURRY_COUNTDOWN_MS, CONTEST_WINDOW_MS, GUESS_WINDOW_MS, MAX_PLAYERS
 };

@@ -35,13 +35,14 @@ function loadAll() {
  *  decadaMin / decadaMax: ex 1960 / 2020
  *  Se billboardUS e billboardBR estiverem ambos ativos, aceita quem satisfaz qualquer um dos dois.
  */
-function buildDeck(filtros = {}) {
+function buildDeck(filtros = {}, excludeIds = null) {
   const all = loadAll();
   const origem = filtros.origem || 'AMBAS';
   const dMin = filtros.decadaMin || 0;
   const dMax = filtros.decadaMax || 9999;
 
   let deck = all.filter(s => {
+    if (excludeIds && excludeIds.has(s.id)) return false;   // ja tocou nesta sessao
     if (origem === 'BR' && s.origem !== 'BR') return false;
     if (origem === 'INTL' && s.origem !== 'INTL') return false;
     if (s.year < dMin || s.year > dMax + 9) return false;

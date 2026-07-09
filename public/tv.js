@@ -494,13 +494,17 @@ function showEnd(winner) {
   });
 }
 
+let playbackGen = 0; // invalida loops/retentativas de reproducoes anteriores
+
 // ---------------- reproducao ----------------
 async function playCurrentTrack(isReplay = false, attempt = 0) {
+  const myGen = ++playbackGen;
   stopAudio();
   try {
     // o servidor ja troca a faixa sozinho em caso de falha; aqui so retentamos
     // a chamada algumas vezes sem alarde, para o jogador nunca ver erro
     const res = await fetch(`/api/resolve?sala=${ROOM}`);
+    if (myGen !== playbackGen) return; // rodada mudou enquanto resolvia
     const info = await res.json();
     if (info.error) {
       if (attempt < 3) return setTimeout(() => playCurrentTrack(isReplay, attempt + 1), 1200);
@@ -509,14 +513,18 @@ async function playCurrentTrack(isReplay = false, attempt = 0) {
     }
 
     showVinyl(true);
-    const dur = (STATE?.config?.duracaoTrechoSeg || 30) * 1000;
+    const dur = (STATE?.config?.duracaoTrechoSeg || 60) * 1000;
 
     if (info.type === 'preview') {
+      // o preview do Deezer dura uns 30s; se a duracao configurada for maior,
+      // repete o trecho em loop ate completar o tempo pedido
       const a = $('#audio-preview');
       a.src = info.url;
+      a.onended = () => { if (myGen === playbackGen) a.play().catch(() => {}); };
       await a.play().catch(() => toast('Clique na tela da TV para liberar o audio.'));
     } else if (info.type === 'youtube') {
       await ensureYouTube();
+      if (myGen !== playbackGen) return;
       ytPlayer.loadVideoById(info.videoId);
       ytPlayer.playVideo();
     } else if (info.type === 'spotify') {
@@ -526,6 +534,7 @@ async function playCurrentTrack(isReplay = false, attempt = 0) {
     startProgress(dur);
     playTimer = setTimeout(() => stopAudio(), dur);
   } catch (e) {
+    if (myGen !== playbackGen) return;
     if (attempt < 3) return setTimeout(() => playCurrentTrack(isReplay, attempt + 1), 1200);
     showVinyl(false);
     $('#phase-status').textContent = 'Preparando o som...';
@@ -533,9 +542,11 @@ async function playCurrentTrack(isReplay = false, attempt = 0) {
 }
 
 function stopAudio() {
+  playbackGen++; // cancela qualquer loop ou retentativa em andamento
   clearTimeout(playTimer);
   clearInterval(progressTimer);
   const a = $('#audio-preview');
+  a.onended = null;
   a.pause(); a.removeAttribute('src');
   try { ytPlayer?.stopVideo(); } catch {}
   try { if (spotifyDeviceId) fetch(`https://api.spotify.com/v1/me/player/pause?device_id=${spotifyDeviceId}`, { method: 'PUT', headers: spotifyHeaders() }); } catch {}

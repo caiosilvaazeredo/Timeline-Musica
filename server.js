@@ -167,7 +167,7 @@ app.get('/api/resolve', async (req, res) => {
     } catch (e) {
       lastError = e;
       if (room.round.phase !== 'placing' || !room.deck.length) break;
-      room.round.card = room.deck.pop();   // troca a carta e mantem a rodada
+      room.round.card = engine.drawCard(room);   // troca a carta e mantem a rodada, sem repetir na sessao
     }
   }
   res.status(502).json({ error: lastError?.message || 'Sem faixa disponivel.' });
@@ -222,7 +222,7 @@ function quickPreset(origem) {
     meta: 8,
     fichasIniciais: 3,
     fonte: 'PREVIEW',
-    duracaoTrechoSeg: 30,
+    duracaoTrechoSeg: 60,
     maxContestacoes: 3,
     filtros: { origem, billboardUS: false, billboardBR: false, decadaMin: 1950, decadaMax: 2020 }
   };
@@ -334,6 +334,7 @@ io.on('connection', (socket) => {
     if (!room) return;
     const r = engine.startGame(room);
     if (r.error) return cb?.(r);
+    if (r.historyReset) io.to(socket.id).emit('history:reset');
     io.to(room.code).emit('game:started');
     broadcast(room);
     setTimeout(() => beginRound(room), 1200);

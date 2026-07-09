@@ -2,6 +2,17 @@
 
 Jogo de festa multiplayer de linha do tempo musical (inspirado no classico Hitster) para jogar na sala: a TV e o palco (audio, QR code, placar) e cada jogador usa o proprio celular como controle, no estilo Kahoot. Ate 8 jogadores simultaneos.
 
+## Como comecar
+
+Ao abrir `/tv`, o host escolhe entre:
+
+- **Inicio Rapido**: sem login, sem configuracao. Preset equilibrado (Original, meta 8, trecho de 30s via Deezer) e o QR ja aparece em segundos, pronto pra colocar na TV da sala.
+- **Sala Personalizada**: o painel completo de modo, fonte de musica, repertorio e regras.
+
+Em qualquer um dos dois, a sala pode ser **privada** (so quem tem o codigo entra) ou **publica** (aparece na lista de salas abertas da pagina inicial, estilo Gartic, para qualquer visitante entrar sem digitar codigo). O host alterna isso a qualquer momento no lobby pelo botao de visibilidade.
+
+O QR code e o atalho de entrada usam sempre a URL real que a TV esta servindo naquele momento (nunca localhost por variavel de ambiente esquecida); um dominio curto customizado via `JOIN_URL` e opcional, para quem quiser o modelo kahoot.it/kahoot.com com dois enderecos.
+
 ## Como funciona
 
 1. Abra `/tv` na TV (navegador da smart TV, Chromecast, notebook no HDMI). A sala e criada automaticamente com codigo e QR code.

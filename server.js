@@ -13,13 +13,22 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
 const PORT = process.env.PORT || 3000;
-const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+const BASE_URL_ENV = process.env.BASE_URL || null;
 // Dominio curto opcional para os jogadores (equivalente ao kahoot.it).
-// Ex: JOIN_URL=https://vitrola.page aponta para o mesmo servico via dominio customizado.
-const JOIN_URL = process.env.JOIN_URL || BASE_URL;
+// So e usado se configurado explicitamente; sem ele, cada TV usa a propria URL publica.
+const JOIN_URL_OVERRIDE = process.env.JOIN_URL || null;
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID || '';
 const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET || '';
 const YT_API_KEY = process.env.YT_API_KEY || '';
+
+// Deriva a URL publica real a partir da requisicao quando BASE_URL nao foi configurada,
+// para nunca cair em localhost em producao por esquecimento de variavel de ambiente.
+function resolveBaseUrl(req) {
+  if (BASE_URL_ENV) return BASE_URL_ENV;
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+  const host = req.get('host');
+  return `${proto}://${host}`;
+}
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -38,8 +47,10 @@ app.get('/api/features', (req, res) => res.json({
   spotify: Boolean(SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET),
   youtube: Boolean(YT_API_KEY),
   preview: true,
-  baseUrl: BASE_URL
+  baseUrl: resolveBaseUrl(req)
 }));
+
+app.get('/api/rooms/public', (req, res) => res.json(engine.listPublicRooms()));
 
 // ---------------- Spotify OAuth (Authorization Code) ----------------
 // A TV loga com a conta Spotify Premium de um dos jogadores para tocar as musicas completas.
@@ -52,7 +63,7 @@ app.get('/auth/spotify', (req, res) => {
     response_type: 'code',
     client_id: SPOTIFY_CLIENT_ID,
     scope,
-    redirect_uri: `${BASE_URL}/auth/spotify/callback`,
+    redirect_uri: `${resolveBaseUrl(req)}/auth/spotify/callback`,
     state: room
   });
   res.redirect(`https://accounts.spotify.com/authorize?${params}`);
@@ -64,7 +75,7 @@ app.get('/auth/spotify/callback', async (req, res) => {
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
       code: String(code),
-      redirect_uri: `${BASE_URL}/auth/spotify/callback`
+      redirect_uri: `${resolveBaseUrl(req)}/auth/spotify/callback`
     });
     const r = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
@@ -184,6 +195,17 @@ app.get('/api/resolve', async (req, res) => {
 
 // ---------------- Socket.io ----------------
 
+// Preset do Inicio Rapido: sem login, dificuldade equilibrada, pronto para a TV da sala
+const QUICK_PRESET = {
+  modo: 'ORIGINAL',
+  meta: 8,
+  fichasIniciais: 3,
+  fonte: 'PREVIEW',
+  duracaoTrechoSeg: 30,
+  maxContestacoes: 3,
+  filtros: { origem: 'AMBAS', billboardUS: false, billboardBR: false, decadaMin: 1950, decadaMax: 2020 }
+};
+
 function broadcast(room) {
   io.to(room.code).emit('state', engine.publicState(room));
 }
@@ -243,12 +265,19 @@ function doReveal(room) {
 
 io.on('connection', (socket) => {
   // -------- TV --------
-  socket.on('tv:create', (cb) => {
+  socket.on('tv:create', ({ quick, visibility } = {}, cb) => {
     const room = engine.createRoom(socket.id);
+    room.visibility = visibility === 'public' ? 'public' : 'private';
+    if (quick) room.config = { ...room.config, ...QUICK_PRESET, filtros: { ...QUICK_PRESET.filtros } };
     socket.join(room.code);
     socket.data.roomCode = room.code;
     socket.data.isTV = true;
-    cb?.({ code: room.code, joinUrl: `${JOIN_URL}/${room.code}`, joinHost: JOIN_URL.replace(/^https?:\/\//, ""), state: engine.publicState(room) });
+    cb?.({ code: room.code, joinOverride: JOIN_URL_OVERRIDE, state: engine.publicState(room) });
+  });
+
+  socket.on('tv:set-visibility', ({ visibility }) => {
+    const room = engine.getRoom(socket.data.roomCode);
+    if (room && room.state === 'lobby') { room.visibility = visibility === 'public' ? 'public' : 'private'; broadcast(room); }
   });
 
   socket.on('tv:config', ({ config }, cb) => {
@@ -466,10 +495,10 @@ io.on('connection', (socket) => {
     socket.join(room.code);
     socket.data.roomCode = room.code;
     socket.data.isTV = true;
-    cb?.({ ok: true, state: engine.publicState(room), joinUrl: `${JOIN_URL}/${room.code}`, joinHost: JOIN_URL.replace(/^https?:\/\//, "") });
+    cb?.({ ok: true, state: engine.publicState(room), joinOverride: JOIN_URL_OVERRIDE });
   });
 });
 
 server.listen(PORT, () => {
-  console.log(`Vitrola rodando em ${BASE_URL}`);
+  console.log(`Vitrola rodando na porta ${PORT}${BASE_URL_ENV ? ` (BASE_URL=${BASE_URL_ENV})` : ' (URL detectada por requisicao)'}`);
 });

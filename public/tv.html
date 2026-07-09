@@ -9,17 +9,50 @@
 </head>
 <body>
 
+<!-- ============ ESCOLHA DE MODO ============ -->
+<section id="scr-mode-choice" class="screen mode-choice">
+  <div class="mc-wrap">
+    <div class="mini-vinyl big" aria-hidden="true"></div>
+    <h1 class="mc-title">VITROLA</h1>
+    <p class="mc-sub">Como voce quer comecar?</p>
+
+    <div class="mc-cards">
+      <button id="mc-quick" class="mc-card mc-quick">
+        <span class="mc-icon">⚡</span>
+        <span class="mc-name">Inicio Rapido</span>
+        <span class="mc-desc">Sem login, sem ajustes. Aponta o QR e joga em segundos.</span>
+      </button>
+      <button id="mc-custom" class="mc-card mc-custom">
+        <span class="mc-icon">🎛️</span>
+        <span class="mc-name">Sala Personalizada</span>
+        <span class="mc-desc">Escolha modo, fonte de musica, repertorio e mais.</span>
+      </button>
+    </div>
+
+    <div class="mc-visibility">
+      <button id="mc-vis-private" class="vis-btn sel" data-vis="private">🔒 Privada, so quem tiver o codigo</button>
+      <button id="mc-vis-public" class="vis-btn" data-vis="public">🌍 Publica, aparece no menu inicial</button>
+    </div>
+  </div>
+</section>
+
 <!-- ============ LOBBY ============ -->
-<section id="scr-lobby" class="screen">
+<section id="scr-lobby" class="screen hidden">
   <header class="tv-head">
     <div class="brand"><span class="mini-vinyl" aria-hidden="true"></span> VITROLA</div>
-    <div class="room-code num" id="lobby-code" title="Codigo da sala">-----</div>
+    <div class="head-right">
+      <button id="vis-toggle" class="vis-pill" title="Alternar sala publica ou privada"></button>
+      <div class="room-code num" id="lobby-code" title="Codigo da sala">-----</div>
+    </div>
   </header>
 
   <div class="lobby-grid">
-    <aside class="panel config">
-      <h2>Configuracao da partida</h2>
-
+    <aside class="panel config" id="config-panel">
+      <div class="config-head">
+        <h2>Configuracao da partida</h2>
+        <button id="btn-collapse-config" class="config-toggle hidden">Ajustar configuracoes ▾</button>
+      </div>
+      <div id="config-body">
       <label>Tema visual
         <select id="cfg-tema">
           <option value="vitrola">Vitrola (ameixa e ouro)</option>
@@ -80,6 +113,7 @@
         <label>Ate <select id="cfg-dmax"></select></label>
       </div>
       <p class="deck-info num" id="deck-info"></p>
+      </div>
     </aside>
 
     <div class="panel qr-panel">

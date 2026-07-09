@@ -11,16 +11,62 @@ let ytPlayer = null, ytReady = false;
 let playTimer = null, progressTimer = null;
 
 // ---------------- criacao / reconexao da sala ----------------
+// O QR e o link de entrada usam sempre a URL que a propria TV esta usando agora
+// (location.origin), entao nunca caem em localhost por esquecimento de variavel
+// de ambiente. Um dominio curto customizado (JOIN_URL no servidor) sobrepõe isso
+// quando configurado, para o modelo kahoot.it.
+function buildJoinInfo(code, joinOverride) {
+  const base = joinOverride || location.origin;
+  const host = base.replace(/^https?:\/\//, '');
+  return { url: `${base}/${code}`, host };
+}
+
 const savedCode = sessionStorage.getItem('vitrola_tv_room');
 if (savedCode) {
   socket.emit('tv:reclaim', { code: savedCode }, (res) => {
     if (res?.ok) bootRoom(savedCode, res, res.state);
-    else createRoom();
+    else showModeChoice();
   });
-} else createRoom();
+} else showModeChoice();
 
-function createRoom() {
-  socket.emit('tv:create', (res) => {
+function showModeChoice() {
+  $('#scr-mode-choice').classList.remove('hidden');
+}
+
+let pendingVisibility = 'private';
+document.querySelectorAll('.vis-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.vis-btn').forEach(x => x.classList.remove('sel'));
+    b.classList.add('sel');
+    pendingVisibility = b.dataset.vis;
+  });
+});
+
+$('#mc-quick').addEventListener('click', () => startWithMode(true));
+$('#mc-custom').addEventListener('click', () => startWithMode(false));
+
+function startWithMode(quick) {
+  $('#scr-mode-choice').classList.add('hidden');
+  createRoom(quick, pendingVisibility);
+  if (quick) {
+    $('#config-body').classList.add('hidden');
+    $('#btn-collapse-config').classList.remove('hidden');
+  }
+}
+
+$('#btn-collapse-config').addEventListener('click', () => {
+  const body = $('#config-body');
+  body.classList.toggle('hidden');
+  $('#btn-collapse-config').textContent = body.classList.contains('hidden') ? 'Ajustar configuracoes ▾' : 'Ocultar configuracoes ▴';
+});
+
+$('#vis-toggle').addEventListener('click', () => {
+  const next = STATE?.visibility === 'public' ? 'private' : 'public';
+  socket.emit('tv:set-visibility', { visibility: next });
+});
+
+function createRoom(quick, visibility) {
+  socket.emit('tv:create', { quick, visibility: visibility || 'private' }, (res) => {
     sessionStorage.setItem('vitrola_tv_room', res.code);
     bootRoom(res.code, res, res.state);
   });
@@ -28,10 +74,13 @@ function createRoom() {
 
 function bootRoom(code, res, state) {
   ROOM = code;
+  $('#scr-mode-choice').classList.add('hidden');
+  $('#scr-lobby').classList.remove('hidden');
   $('#lobby-code').textContent = code;
-  $('#join-host').textContent = res.joinHost || location.host;
+  const join = buildJoinInfo(code, res.joinOverride);
+  $('#join-host').textContent = join.host;
   $('#join-code-inline').textContent = code;
-  new QRCode($('#qrcode'), { text: res.joinUrl, width: 220, height: 220, colorDark: '#1B1226', colorLight: '#F4E8CF' });
+  new QRCode($('#qrcode'), { text: join.url, width: 220, height: 220, colorDark: '#1B1226', colorLight: '#F4E8CF' });
   render(state);
   loadFeatures();
   loadDeckStats();
@@ -266,6 +315,12 @@ function render(state) {
   STATE = state;
   FX.theme(state.config.tema);
   if ($('#cfg-tema').value !== state.config.tema) $('#cfg-tema').value = state.config.tema;
+
+  // pilula de visibilidade
+  const visBtn = $('#vis-toggle');
+  const isPublic = state.visibility === 'public';
+  visBtn.textContent = isPublic ? '🌍 Publica' : '🔒 Privada';
+  visBtn.classList.toggle('public', isPublic);
 
   // lobby
   $('#player-count').textContent = `${state.players.filter(p => p.connected).length}/8`;

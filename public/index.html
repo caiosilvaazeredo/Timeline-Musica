@@ -9,39 +9,95 @@
 <style>
   body { display: grid; place-items: center; min-height: 100vh; min-height: 100dvh; padding: 24px; }
   .wrap { text-align: center; max-width: 480px; width: 100%; }
-  .vinyl { --size: 150px; margin: 0 auto 26px; }
+  .vinyl { --size: 130px; margin: 0 auto 22px; }
   h1 { font-size: clamp(1.7rem, 6vw, 2.6rem); font-weight: 900; }
-  h1 span { color: var(--gold); }
-  /* entrada estilo kahoot.it: o codigo e a acao principal */
+
   .pin-card {
-    background: var(--ink-2); border-radius: 22px; padding: 26px;
-    margin: 28px 0 18px; box-shadow: 0 18px 50px rgba(0,0,0,.45);
+    background: var(--ink-2); border-radius: 22px; padding: 24px;
+    margin: 24px 0 16px; box-shadow: 0 18px 50px rgba(0,0,0,.45);
   }
   .pin-card label { display: block; font-size: .85rem; color: var(--cream-dim); margin-bottom: 10px; text-transform: uppercase; letter-spacing: .1em; }
   .pin-card input {
     text-transform: uppercase; text-align: center;
-    font-family: var(--font-num); font-size: 2rem; font-weight: 700;
-    letter-spacing: .35em; padding: 16px; border-color: rgba(232,184,75,.4);
+    font-family: var(--font-num); font-size: 1.9rem; font-weight: 700;
+    letter-spacing: .32em; padding: 15px; border-color: rgba(240,190,78,.4);
   }
-  .pin-card input::placeholder { letter-spacing: .2em; font-size: 1.2rem; opacity: .4; }
-  .pin-card button { width: 100%; margin-top: 14px; font-size: 1.15rem; padding: 16px; }
+  .pin-card input::placeholder { letter-spacing: .18em; font-size: 1.1rem; opacity: .4; }
+  .pin-card button { width: 100%; margin-top: 14px; font-size: 1.1rem; padding: 15px; }
+
+  .divider { display: flex; align-items: center; gap: 12px; color: var(--cream-dim); font-size: .8rem; margin: 20px 0; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: rgba(244,232,207,.15); }
+
+  .public-box { text-align: left; margin-bottom: 20px; }
+  .public-list { display: grid; gap: 8px; }
+  .room-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--ink-2); border-radius: 12px; padding: 10px 14px;
+    border: 1px solid rgba(244,232,207,.06); cursor: pointer; text-align: left;
+    width: 100%; color: var(--cream); font-family: var(--font-body);
+  }
+  .room-row:hover { border-color: var(--gold); }
+  .room-row .rc { font-family: var(--font-num); font-weight: 700; color: var(--gold); letter-spacing: .15em; }
+  .room-row .rmodo { font-size: .78rem; color: var(--cream-dim); }
+  .room-row .rcount { margin-left: auto; font-size: .85rem; color: var(--ok); font-family: var(--font-num); }
+  .public-empty { color: var(--cream-dim); font-size: .85rem; text-align: center; padding: 14px; }
+
   .host-link { color: var(--cream-dim); font-size: .95rem; }
-  .host-link a { color: var(--gold); font-weight: 700; }
+  .host-link a { color: var(--gold); font-weight: 700; text-decoration: none; }
 </style>
 </head>
 <body>
 <main class="wrap">
   <div class="vinyl paused" aria-hidden="true"></div>
-  <h1><span>VITROLA</span></h1>
+  <h1>VITROLA</h1>
 
-  <form class="pin-card" onsubmit="event.preventDefault(); const c=this.code.value.replace(/[^a-z0-9]/gi,''); if(c) location.href='/'+c.toUpperCase();">
+  <form class="pin-card" id="pin-form">
     <label for="pin">Codigo da sala</label>
     <input id="pin" name="code" placeholder="CODIGO" maxlength="6" autocomplete="off"
            autocapitalize="characters" inputmode="text" autofocus aria-label="Codigo da sala">
     <button class="btn-gold" type="submit">Entrar no jogo</button>
   </form>
 
+  <div class="divider">ou escolha uma sala aberta</div>
+
+  <div class="public-box">
+    <div id="public-list" class="public-list">
+      <p class="public-empty">Procurando salas publicas...</p>
+    </div>
+  </div>
+
   <p class="host-link">Vai ser o host? <a href="/tv">Abra na TV e crie a sala</a></p>
 </main>
+
+<script>
+  document.getElementById('pin-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const c = e.target.code.value.replace(/[^a-z0-9]/gi, '');
+    if (c) location.href = '/' + c.toUpperCase();
+  });
+
+  const MODO_LABEL = { ORIGINAL: 'Original', PRO: 'PRO', EXPERT: 'Expert', EQUIPES: 'Equipes' };
+
+  async function loadPublicRooms() {
+    try {
+      const rooms = await (await fetch('/api/rooms/public')).json();
+      const box = document.getElementById('public-list');
+      if (!rooms.length) {
+        box.innerHTML = '<p class="public-empty">Nenhuma sala publica agora. Que tal criar a sua?</p>';
+        return;
+      }
+      box.innerHTML = rooms.map(r => `
+        <button class="room-row" data-code="${r.code}">
+          <span class="rc">${r.code}</span>
+          <span class="rmodo">${MODO_LABEL[r.modo] || r.modo} &middot; meta ${r.meta}</span>
+          <span class="rcount">${r.players}/${r.max}</span>
+        </button>`).join('');
+      box.querySelectorAll('.room-row').forEach(b =>
+        b.addEventListener('click', () => location.href = '/' + b.dataset.code));
+    } catch (e) { /* mantem a ultima lista exibida em caso de falha temporaria */ }
+  }
+  loadPublicRooms();
+  setInterval(loadPublicRooms, 4000);
+</script>
 </body>
 </html>

@@ -7,6 +7,44 @@
   margin-bottom: 26px;
 }
 .tv-head.slim { margin-bottom: 14px; }
+
+/* ---------- escolha de modo ---------- */
+.mode-choice {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+}
+.mc-wrap { max-width: 720px; text-align: center; padding: 20px; }
+.mini-vinyl.big { width: 64px; height: 64px; margin: 0 auto 18px; }
+.mc-title { font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 900; letter-spacing: .04em; }
+.mc-sub { color: var(--cream-dim); font-size: 1.1rem; margin: 10px 0 32px; }
+.mc-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.mc-card {
+  background: var(--ink-2); border: 2px solid transparent; border-radius: 20px;
+  padding: 28px 20px; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  transition: transform .15s ease, border-color .15s ease;
+}
+.mc-card:hover { transform: translateY(-4px); border-color: var(--gold); }
+.mc-icon { font-size: 2.6rem; }
+.mc-name { font-family: var(--font-display); font-size: 1.15rem; color: var(--cream); }
+.mc-desc { font-size: .85rem; color: var(--cream-dim); line-height: 1.4; }
+.mc-quick .mc-icon { filter: drop-shadow(0 0 14px var(--glow)); }
+
+.mc-visibility { display: flex; gap: 10px; justify-content: center; margin-top: 28px; flex-wrap: wrap; }
+.vis-btn {
+  background: var(--ink-2); color: var(--cream-dim); border: 2px solid transparent;
+  padding: 10px 18px; border-radius: 999px; font-size: .85rem; font-weight: 600;
+}
+.vis-btn.sel { border-color: var(--gold); color: var(--gold); }
+
+.head-right { display: flex; align-items: center; gap: 12px; }
+.vis-pill {
+  background: var(--ink-2); color: var(--cream-dim); border: 1px solid rgba(244,232,207,.15);
+  padding: 8px 14px; border-radius: 999px; font-size: .8rem; font-weight: 600;
+}
+.vis-pill.public { color: var(--ok); border-color: var(--ok); }
+
+.config-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.config-toggle { background: none; color: var(--gold); font-size: .8rem; padding: 4px 0; }
+#config-body.hidden { display: none; }
 .brand {
   font-family: var(--font-display); font-weight: 900; font-size: 1.3rem;
   display: flex; align-items: center; gap: 12px;

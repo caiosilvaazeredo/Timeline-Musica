@@ -40,6 +40,7 @@ function createRoom(tvSocketId) {
     code: code4(),
     tvSocketId,
     state: 'lobby',            // lobby | playing | paused | ended
+    visibility: 'private',     // private | public (salas publicas aparecem no menu inicial)
     locked: false,
     config: JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
     players: [],               // {id, token, socketId, name, emoji, team, timeline[], fichas, connected}
@@ -364,6 +365,7 @@ function publicState(room) {
     code: room.code,
     state: room.state,
     locked: room.locked,
+    visibility: room.visibility,
     spotifyConnected: Boolean(room.spotifyConnected),
     config: room.config,
     roundNumber: room.round?.number || 0,
@@ -395,9 +397,21 @@ function removeRoom(code) {
   rooms.delete(code);
 }
 
+// Salas publicas abertas no lobby, para o menu inicial (estilo Gartic: entra sem codigo)
+function listPublicRooms() {
+  const list = [];
+  for (const room of rooms.values()) {
+    if (room.visibility !== 'public' || room.state !== 'lobby' || room.locked) continue;
+    const count = room.players.filter(p => p.connected).length;
+    if (count >= MAX_PLAYERS) continue;
+    list.push({ code: room.code, players: count, max: MAX_PLAYERS, modo: room.config.modo, tema: room.config.tema, meta: room.config.meta });
+  }
+  return list.sort((a, b) => b.players - a.players);
+}
+
 module.exports = {
   rooms, createRoom, getRoom, addPlayer, startGame, startRound,
   placeTurnCard, requestContest, placeContestCard, submitGuess, allEligibleGuessed, reveal,
-  publicState, timelineOf, removeRoom, entities,
+  publicState, timelineOf, removeRoom, entities, listPublicRooms,
   PLACING_TIMEOUT_MS, CONTEST_WINDOW_MS, GUESS_WINDOW_MS, MAX_PLAYERS
 };

@@ -325,3 +325,21 @@
   animation: floatUp 3s ease-out forwards; white-space: nowrap;
 }
 .float-chip .pet-img { width: 26px; height: 26px; }
+
+/* cronometro visual */
+.timer-pill {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 14px;
+  background: var(--ink-2); border: 2px solid var(--gold);
+  border-radius: 18px; padding: 12px 20px; min-width: min(460px, 80vw);
+}
+.timer-label { font-weight: 700; font-size: 1.05rem; text-align: left; }
+.timer-secs { font-size: 1.8rem; font-weight: 700; color: var(--gold); }
+.timer-track {
+  grid-column: 1 / -1; height: 10px; border-radius: 99px;
+  background: rgba(244,232,207,.14); overflow: hidden;
+}
+.timer-bar { display: block; height: 100%; background: var(--gold); transition: width 1s linear; }
+.timer-pill.urgent { border-color: var(--hot); animation: urgentPulse .8s ease-in-out infinite; }
+.timer-pill.urgent .timer-secs { color: var(--hot); }
+.timer-pill.urgent .timer-bar { background: var(--hot); }
+@keyframes urgentPulse { 50% { box-shadow: 0 0 26px color-mix(in srgb, var(--hot) 55%, transparent); } }

@@ -20,6 +20,8 @@ let placingAs = null;      // 'turn' | 'contest' | null
 let iContested = false;
 let iPlacedContest = false;
 let iGuessed = false;
+let iPassed = false;      // ja declarei que nao vou contestar nesta rodada
+let igSkipped = false;    // apertei "nao sei" no palpite inline
 
 // usar este aparelho como tela extra: espelha a partida (o codigo da sala tambem vale)
 on('#btn-as-screen', 'click', () => {
@@ -190,7 +192,7 @@ function syncPhase(state) {
   const isPaused = state.state === 'paused';
 
   show('#btn-replay', isMyTurn && state.phase && state.phase !== 'reveal');
-  show('#btn-early-guess', isMyTurn && !iGuessed && (state.phase === 'placing' || state.phase === 'contest'));
+  show('#btn-early-guess', false);   // substituido pelo palpite inline no placer
 
   // botao de contestar: so habilita depois que o jogador da vez jogou
   const canContest =
@@ -204,6 +206,8 @@ function syncPhase(state) {
   const wasDisabled = contestBtn.disabled;
   contestBtn.disabled = !canContest;
   if (wasDisabled && canContest) { FX.vibrate(35); FX.zoom(contestBtn); }
+  // "nao vou contestar": encerra a janela mais cedo quando todos se resolvem
+  show('#btn-pass-contest', canContest && !iPassed);
 
   if (state.phase === 'placing') {
     if (isMyTurn && placingAs !== 'turn') {
@@ -215,10 +219,11 @@ function syncPhase(state) {
       const t = state.players.find(x => x.id === state.turnPlayerId);
       status(`Vez de ${t?.name || '...'}. Contestar libera quando a carta for posicionada.`, '');
       hidePlacer();
-      // apos 15s da rodada, libera o botao de apressar (se ninguem acionou ainda)
+      // o botao de apressar so aparece quando a musica termina
       clearTimeout(window._hurryTimer);
       if (!state.hurryActive && state.roundStartedAt) {
-        const waitMs = Math.max(0, 15000 - (Date.now() - state.roundStartedAt));
+        const musicaMs = (state.config.duracaoTrechoSeg || 30) * 1000;
+        const waitMs = Math.max(0, musicaMs - (Date.now() - state.roundStartedAt));
         window._hurryTimer = setTimeout(() => {
           if (STATE?.phase === 'placing' && !STATE.hurryActive) show('#btn-hurry', true);
         }, waitMs);
@@ -251,9 +256,13 @@ function syncPhase(state) {
 // ---------------- rodadas ----------------
 socket.on('round:start', () => {
   selectedSlot = null; placingAs = null; iContested = false; iPlacedContest = false; iGuessed = false;
+  iPassed = false; igSkipped = false;
   hideAll();
   show('#p-reveal', false);
   show('#btn-hurry', false);
+  show('#btn-pass-contest', false);
+  $('#ig-artist').value = ''; $('#ig-title').value = ''; $('#ig-year').value = '';
+  $('#inline-guess').classList.remove('skipped');
   clearTimeout(window._hurryTimer);
   // limpa o que sobrou do palpite da musica anterior
   $('#guess-artist').value = ''; $('#guess-title').value = ''; $('#guess-year').value = '';
@@ -282,6 +291,10 @@ function openPlacer(mode, label) {
   buildTimelineSlots();
   show('#placer', true);
   show('#guesser', false);
+  // na minha vez, o palpite de artista/musica vem junto da posicao
+  const inlineOn = mode === 'turn';
+  show('#inline-guess', inlineOn);
+  if (inlineOn) $('#ig-year').classList.toggle('hidden', STATE?.config.modo !== 'EXPERT');
   status(mode === 'turn' ? 'Ouca o trecho na TV e escolha o intervalo.' : 'Contestacao: escolha o intervalo na sua linha.', mode === 'turn' ? '' : 'hot');
 }
 
@@ -313,13 +326,38 @@ function buildTimelineSlots() {
   });
 }
 
+on('#btn-ig-skip', 'click', () => {
+  igSkipped = true;
+  $('#ig-artist').value = ''; $('#ig-title').value = ''; $('#ig-year').value = '';
+  $('#inline-guess').classList.add('skipped');
+  status('Sem palpite. Escolha a posicao e confirme.', '');
+});
+
 on('#btn-confirm-slot', 'click', () => {
   if (selectedSlot === null) return;
-  const ev = placingAs === 'turn' ? 'player:place' : 'player:contest-place';
+  const wasTurn = placingAs === 'turn';
+  const ev = wasTurn ? 'player:place' : 'player:contest-place';
   socket.emit(ev, { slot: selectedSlot }, (res) => {
     if (res?.error) return status(res.error, 'hot');
     if (placingAs === 'contest') iPlacedContest = true;
+
+    // envia o palpite inline junto da jogada (corta a musica se tiver conteudo)
+    if (wasTurn) {
+      const artist = $('#ig-artist').value.trim();
+      const title = $('#ig-title').value.trim();
+      const year = $('#ig-year').value || null;
+      const modoLivre = STATE?.config.modo !== 'PRO' && STATE?.config.modo !== 'EXPERT';
+      if (artist || title || year) {
+        socket.emit('player:guess', { artist, title, year }, () => { iGuessed = true; });
+      } else if (igSkipped || modoLivre) {
+        // "nao sei" (ou branco fora do PRO/Expert) ja conta como respondido
+        socket.emit('player:guess', {}, () => { iGuessed = true; });
+      }
+      // PRO/Expert em branco sem "nao sei": a janela de palpite abre depois, pois vale a carta
+    }
+
     hidePlacer();
+    show('#inline-guess', false);
     FX.vibrate(25);
     FX.flash('color-mix(in srgb, var(--ok) 35%, transparent)');
     status('Posicao confirmada. Cruze os dedos!', 'ok');
@@ -373,6 +411,16 @@ on('#btn-guess', 'click', () => {
     if (res.stopMusic) { FX.flash('color-mix(in srgb, var(--gold) 55%, transparent)'); FX.vibrate([30, 40, 30]); }
     status(res.stopMusic ? 'Musica cortada! Palpite registrado.' : 'Palpite enviado. Aguardando a revelacao...', 'ok');
     $('#guess-artist').value = ''; $('#guess-title').value = ''; $('#guess-year').value = '';
+  });
+});
+
+on('#btn-pass-contest', 'click', () => {
+  iPassed = true;
+  show('#btn-pass-contest', false);
+  $('#btn-contest').disabled = true;
+  socket.emit('player:pass-contest', (res) => {
+    if (res?.error) return status(res.error, 'hot');
+    status('Beleza, sem contestacao. Aguardando os demais...', '');
   });
 });
 

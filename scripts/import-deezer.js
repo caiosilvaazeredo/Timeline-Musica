@@ -139,7 +139,7 @@ async function collectTracks(playlistId, seenKeys, out, origem, cap = 250) {
       composer: r.artist,   // API publica do Deezer nao expoe compositor de forma confiavel
       year,
       origem: isBR ? 'BR' : 'INTL',
-      billboardUS: false,
+      billboardUS: !isBR,   // playlists de busca sao de hits: vale como "ja foi top"
       billboardBR: isBR,
       preview: r.preview,
       deezerId: r.dzId

@@ -252,7 +252,7 @@ async function resolveSong(fonte, song, roomCode) {
 // Presets do menu inicial: festas prontas sem login e sem tela de configuracao.
 // Cada card do menu chama um destes ids diretamente.
 const QUICK_PRESETS = {
-  FESTA:   { modo: 'ORIGINAL', origem: 'AMBAS' },
+  FESTA:   { modo: 'ORIGINAL', origem: 'AMBAS', top100: true },
   BR:      { modo: 'ORIGINAL', origem: 'BR' },
   INTL:    { modo: 'ORIGINAL', origem: 'INTL' },
   PRO:     { modo: 'PRO',      origem: 'AMBAS' },
@@ -270,7 +270,7 @@ function quickPreset(id) {
     fonte: 'PREVIEW',
     duracaoTrechoSeg: 30,
     maxContestacoes: 3,
-    filtros: { origem: p.origem, billboardUS: false, billboardBR: false, decadaMin: 1950, decadaMax: 2020 }
+    filtros: { origem: p.origem, billboardUS: Boolean(p.top100), billboardBR: Boolean(p.top100), decadaMin: 1950, decadaMax: 2020 }
   };
 }
 
@@ -519,6 +519,18 @@ io.on('connection', (socket) => {
     });
     broadcast(room);
     cb?.({ ok: true });
+    // se todos os demais ja se resolveram, nao espera o cronometro:
+    // os contestadores ainda posicionam durante a fase de palpites
+    if (engine.allNonTurnResolved(room)) closeContestAndGuess(room);
+  });
+
+  socket.on('player:pass-contest', (cb) => {
+    const room = engine.getRoom(socket.data.roomCode);
+    if (!room) return;
+    const r = engine.passContest(room, socket.data.playerId);
+    if (r.error) return cb?.(r);
+    cb?.({ ok: true });
+    if (engine.allNonTurnResolved(room)) closeContestAndGuess(room);
   });
 
   socket.on('player:contest-place', ({ slot }, cb) => {
@@ -570,7 +582,8 @@ io.on('connection', (socket) => {
     if (!room || room.state !== 'playing' || !r || r.phase !== 'placing') return cb?.({ error: 'Fora de hora.' });
     if (socket.data.playerId === r.turnPlayerId) return cb?.({ error: 'Voce e o jogador da vez.' });
     if (r.hurry) return cb?.({ error: 'O cronometro ja esta rodando.' });
-    if (Date.now() - r.startedAt < engine.HURRY_AFTER_MS) return cb?.({ error: 'Aguarde 15 segundos antes de apressar.' });
+    const musicaMs = (room.config.duracaoTrechoSeg || 30) * 1000;
+    if (Date.now() - r.startedAt < musicaMs) return cb?.({ error: 'Aguarde a musica terminar para apressar.' });
     r.hurry = true;
     const by = room.players.find(p => p.id === socket.data.playerId);
     io.to(room.code).emit('hurry:started', { seconds: engine.HURRY_COUNTDOWN_MS / 1000, byName: by?.name || '', byPet: by?.pet || '' });
@@ -586,7 +599,7 @@ io.on('connection', (socket) => {
     const room = engine.getRoom(socket.data.roomCode);
     if (!room || room.state !== 'playing' || room.round?.phase !== 'reveal') return;
     const next = engine.peekNextTurn(room);
-    if (next && next.id === socket.data.playerId) beginRound(room);
+    if (next && (next.id === socket.data.playerId || !next.connected)) beginRound(room);
   });
 
   socket.on('player:replay', () => {

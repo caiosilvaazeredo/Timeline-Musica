@@ -174,3 +174,9 @@
 }
 .pet-grid button { position: relative; }
 @keyframes petSpin { to { transform: rotate(360deg); } }
+
+.pass { align-self: center; }
+.inline-guess { display: grid; gap: 8px; background: var(--ink-2); border-radius: 14px; padding: 12px; }
+.ig-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.ig-row button { padding: 0 16px; font-size: .85rem; white-space: nowrap; }
+.inline-guess.skipped { opacity: .45; }

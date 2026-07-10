@@ -186,23 +186,16 @@ function nextTurnPlayer(room) {
     const teamNames = Object.keys(room.teams);
     room.turnIndex = (room.turnIndex + 1) % teamNames.length;
     const team = teamNames[room.turnIndex];
-    const members = active.filter(p => p.team === team);
+    const members = room.players.filter(p => p.team === team);
     const controller = members[room.roundCount % members.length];
     return { entityId: team, player: controller };
   }
-  // revezamento pela ordem fixa da partida, pulando desconectados:
-  // contestar, vencer carta ou qualquer outra acao nao altera a vez
-  const activeIds = new Set(active.map(p => p.id));
-  if (!room.turnOrder?.length) room.turnOrder = active.map(p => p.id);
-  for (let i = 0; i < room.turnOrder.length; i++) {
-    room.turnIndex = (room.turnIndex + 1) % room.turnOrder.length;
-    const pid = room.turnOrder[room.turnIndex];
-    if (activeIds.has(pid)) {
-      const p = active.find(x => x.id === pid);
-      return { entityId: p.id, player: p };
-    }
-  }
-  const p = active[0];
+  // revezamento pela ordem fixa da partida, SEM pular ninguem:
+  // jogador offline mantem a vez (pode reconectar; os outros podem apressar apos a musica)
+  if (!room.turnOrder?.length) room.turnOrder = room.players.map(p => p.id);
+  room.turnIndex = (room.turnIndex + 1) % room.turnOrder.length;
+  const pid = room.turnOrder[room.turnIndex];
+  const p = room.players.find(x => x.id === pid) || active[0];
   return { entityId: p.id, player: p };
 }
 
@@ -214,17 +207,13 @@ function peekNextTurn(room) {
     const teamNames = Object.keys(room.teams);
     if (!teamNames.length) return null;
     const team = teamNames[(room.turnIndex + 1) % teamNames.length];
-    const members = active.filter(p => p.team === team);
+    const members = room.players.filter(p => p.team === team);
     if (!members.length) return null;
     return members[(room.roundCount + 1) % members.length];
   }
-  const activeIds = new Set(active.map(p => p.id));
-  const order = room.turnOrder?.length ? room.turnOrder : active.map(p => p.id);
-  for (let i = 1; i <= order.length; i++) {
-    const pid = order[(room.turnIndex + i) % order.length];
-    if (activeIds.has(pid)) return active.find(x => x.id === pid);
-  }
-  return active[0];
+  const order = room.turnOrder?.length ? room.turnOrder : room.players.map(p => p.id);
+  const pid = order[(room.turnIndex + 1) % order.length];
+  return room.players.find(x => x.id === pid) || active[0];
 }
 
 function startRound(room) {
@@ -242,6 +231,7 @@ function startRound(room) {
     phase: 'placing',                 // placing -> contest -> guessing -> reveal
     turnPlacement: null,              // slot escolhido pelo jogador da vez
     contests: [],                     // {playerId, entityId, ts, slot, tieBroken}
+    declined: new Set(),              // jogadores que abriram mao de contestar
     guesses: {},                      // playerId -> {artist, title, year}
     results: null
   };
@@ -314,6 +304,33 @@ function placeContestCard(room, playerId, slot) {
   if (!(slot >= 0 && slot <= tl.length)) return { error: 'Posicao invalida.' };
   c.slot = slot;
   return { ok: true, allPlaced: r.contests.every(x => x.slot !== null) };
+}
+
+// jogador declara que NAO vai contestar; quando todos os elegiveis se resolvem,
+// a janela fecha na hora, sem esperar o cronometro
+function passContest(room, playerId) {
+  const r = room.round;
+  if (!r || r.phase !== 'contest') return { error: 'Fora da janela de contestacao.' };
+  const p = room.players.find(x => x.id === playerId);
+  if (!p) return { error: 'Jogador nao encontrado.' };
+  const entityId = room.config.modo === 'EQUIPES' ? p.team : p.id;
+  if (entityId === r.turnEntityId) return { error: 'Voce e o jogador da vez.' };
+  r.declined.add(playerId);
+  return { ok: true };
+}
+
+// todos os jogadores conectados fora da vez ja contestaram, recusaram ou nao tem fichas?
+function allNonTurnResolved(room) {
+  const r = room.round;
+  if (!r) return false;
+  const contestedEntities = new Set(r.contests.map(c => c.entityId));
+  return room.players.filter(p => p.connected).every(p => {
+    const entityId = room.config.modo === 'EQUIPES' ? p.team : p.id;
+    if (entityId === r.turnEntityId) return true;
+    if (contestedEntities.has(entityId)) return true;
+    if (fichasOf(room, p.id) <= 0) return true;
+    return r.declined.has(p.id);
+  });
 }
 
 function submitGuess(room, playerId, guess) {
@@ -487,7 +504,7 @@ function listPublicRooms() {
 
 module.exports = {
   rooms, createRoom, getRoom, addPlayer, startGame, startRound,
-  placeTurnCard, requestContest, placeContestCard, submitGuess, allEligibleGuessed, reveal,
+  placeTurnCard, requestContest, placeContestCard, passContest, allNonTurnResolved, submitGuess, allEligibleGuessed, reveal,
   publicState, timelineOf, removeRoom, entities, listPublicRooms, peekNextTurn, drawCard, getRoomByScreenCode,
   HURRY_AFTER_MS, HURRY_COUNTDOWN_MS, CONTEST_WINDOW_MS, GUESS_WINDOW_MS, MAX_PLAYERS
 };

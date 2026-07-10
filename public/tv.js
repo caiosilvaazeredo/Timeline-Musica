@@ -630,12 +630,22 @@ function startProgress(durMs) {
 
 function countdown(el, seconds, label) {
   clearInterval(window._cd);
+  const total = seconds;
   let s = seconds;
-  el.textContent = `${label} (${s}s)`;
+  const draw = () => {
+    const pct = Math.max(0, (s / total) * 100);
+    el.innerHTML = `
+      <div class="timer-pill ${s <= 5 ? 'urgent' : ''}">
+        <span class="timer-label">${esc(label)}</span>
+        <span class="timer-secs num">${s}s</span>
+        <span class="timer-track"><span class="timer-bar" style="width:${pct}%"></span></span>
+      </div>`;
+  };
+  draw();
   window._cd = setInterval(() => {
     s--;
     if (s <= 0) { clearInterval(window._cd); el.textContent = 'Calculando resultados...'; }
-    else el.textContent = `${label} (${s}s)`;
+    else draw();
   }, 1000);
 }
 

@@ -12,12 +12,30 @@
 .lbl { font-size: .8rem; color: var(--cream-dim); text-transform: uppercase; letter-spacing: .08em; }
 .err { color: var(--bad); font-size: .9rem; min-height: 1.2em; }
 
-.emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-.emoji-grid button {
-  font-size: 1.5rem; padding: 10px 0; background: var(--ink-2); border-radius: 12px;
-  border: 2px solid transparent;
+.pet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+  gap: 8px;
+  width: 100%;
 }
-.emoji-grid button.sel { border-color: var(--gold); background: rgba(232,184,75,.12); }
+.pet-grid button {
+  padding: 0; background: var(--ink-2); border-radius: 12px;
+  border: 2px solid transparent; display: grid; place-items: center;
+  aspect-ratio: 1;            /* celulas quadradas que encolhem juntas */
+  min-width: 0;               /* nunca estoura a largura da tela */
+}
+.pet-grid button img { width: 72%; height: 72%; object-fit: contain; }
+.pet-grid button.sel { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 12%, transparent); }
+.pet-grid button.sel img { animation: petBob 1.2s ease-in-out infinite; }
+.pet-avatar { width: 34px; height: 34px; }
+#g-pet { animation: petBob 2.2s ease-in-out infinite; }
+#g-pet.happy { animation: petJump .8s cubic-bezier(.3,1.6,.4,1); }
+#g-pet.sad { animation: petSad .9s ease; }
+#g-pet.excited { animation: petExcited .5s ease infinite; }
+@keyframes petBob { 50% { transform: translateY(-4px); } }
+@keyframes petJump { 30% { transform: translateY(-18px) rotate(-10deg) scale(1.2); } 60% { transform: translateY(0) scale(.92); } }
+@keyframes petSad { 30% { transform: rotate(-14deg) translateY(4px); } 60% { transform: rotate(10deg) translateY(4px); } 100% { transform: rotate(0); } }
+@keyframes petExcited { 50% { transform: translateY(-6px) rotate(6deg); } }
 
 .me-chip {
   align-self: flex-start; background: var(--ink-2); border-radius: 999px;
@@ -98,7 +116,8 @@
 
 .p-foot { display: flex; flex-direction: column; gap: 10px; }
 .reactions { display: flex; gap: 8px; justify-content: center; }
-.reactions button { font-size: 1.4rem; background: var(--ink-2); border-radius: 12px; padding: 8px 12px; }
+.reactions { flex-wrap: wrap; }
+.reactions button { font-size: .82rem; font-weight: 700; background: var(--ink-2); border-radius: 999px; padding: 8px 12px; color: var(--cream); border: 1px solid rgba(244,232,207,.18); }
 .chat-form { display: flex; gap: 8px; }
 .chat-form button { padding: 0 18px; }
 
@@ -123,3 +142,35 @@
 .back-home:hover { color: var(--gold); }
 .lobby-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .back-home-btn { background: transparent; border: 2px solid rgba(244,232,207,.3); color: var(--cream-dim); padding: 8px 12px; font-size: .8rem; border-radius: 10px; }
+
+/* troca de sala e salas publicas na tela de entrada */
+.switch-room { margin-top: 18px; border-top: 1px solid rgba(244,232,207,.14); padding-top: 16px; display: grid; gap: 10px; }
+.switch-form { display: flex; gap: 8px; }
+.switch-form input { text-transform: uppercase; text-align: center; font-family: var(--font-num); letter-spacing: .2em; }
+.switch-form button { padding: 0 20px; }
+.public-rooms { display: grid; gap: 8px; text-align: left; }
+.public-empty { color: var(--cream-dim); font-size: .85rem; text-align: center; }
+.room-row {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--ink-2); border: 1px solid rgba(244,232,207,.14);
+  border-radius: 12px; padding: 12px 14px; color: var(--cream);
+  font-family: var(--font-body); text-align: left;
+}
+.room-row:hover { border-color: var(--gold); }
+.room-row .rc { color: var(--gold); font-weight: 700; letter-spacing: .12em; }
+.room-row .rmodo { color: var(--cream-dim); font-size: .82rem; flex: 1; }
+.room-row .rcount { color: var(--cream-dim); font-size: .82rem; }
+
+.device-mode { margin-top: 14px; border-top: 1px solid rgba(244,232,207,.14); padding-top: 14px; display: grid; gap: 8px; }
+.device-mode button { width: 100%; font-size: .92rem; }
+
+/* spinner enquanto o pet carrega */
+.pet-grid button.loading img { opacity: 0; }
+.pet-grid button.loading::after {
+  content: ''; position: absolute;
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 3px solid rgba(244,232,207,.2); border-top-color: var(--gold);
+  animation: petSpin .8s linear infinite;
+}
+.pet-grid button { position: relative; }
+@keyframes petSpin { to { transform: rotate(360deg); } }

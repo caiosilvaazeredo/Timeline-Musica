@@ -31,7 +31,14 @@ function resolveBaseUrl(req) {
 }
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    // HTML nunca fica preso em cache (e ele que aponta a versao certa dos assets);
+    // js/css usam ?v=hash na URL, entao podem ser cacheados sem risco de mistura
+    if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    else res.setHeader('Cache-Control', 'public, max-age=86400');
+  }
+}));
 
 app.get('/play', (req, res) => res.sendFile(path.join(__dirname, 'public', 'player.html')));
 app.get('/tv', (req, res) => res.sendFile(path.join(__dirname, 'public', 'tv.html')));
@@ -424,8 +431,38 @@ io.on('connection', (socket) => {
     engine.removeRoom(room.code);
   });
 
+  // -------- Telas espelho (outras TVs assistindo a mesma partida) --------
+  socket.on('screen:join', ({ code }, cb) => {
+    const room = engine.getRoomByScreenCode(code) || engine.getRoom(code);
+    if (!room) return cb?.({ error: 'Tela nao encontrada. Confira o codigo de tela.' });
+    const n = room.screens.length + 2;   // a principal e a Tela 1
+    room.screens.push({ socketId: socket.id, n });
+    socket.join(room.code);
+    socket.data.roomCode = room.code;
+    socket.data.isScreen = true;
+    broadcast(room);
+    cb?.({ ok: true, n, state: engine.publicState(room) });
+  });
+
+  socket.on('tv:kick-screen', ({ n }) => {
+    const room = engine.getRoom(socket.data.roomCode);
+    if (!room || socket.id !== room.tvSocketId) return;
+    const sc = room.screens.find(x => x.n === n);
+    if (sc) {
+      io.to(sc.socketId).emit('screen:removed');
+      room.screens = room.screens.filter(x => x.n !== n);
+      broadcast(room);
+    }
+  });
+
+  // a TV principal avisa quando mostra/esconde o vinil, para as telas espelho seguirem
+  socket.on('tv:vinyl', ({ on }) => {
+    const room = engine.getRoom(socket.data.roomCode);
+    if (room && socket.id === room.tvSocketId) socket.to(room.code).emit('screen:vinyl', { on });
+  });
+
   // -------- Jogador --------
-  socket.on('player:join', ({ code, name, emoji, token }, cb) => {
+  socket.on('player:join', ({ code, name, pet, token }, cb) => {
     const room = engine.getRoom(code);
     if (!room) return cb?.({ error: 'Sala nao encontrada. Confira o codigo.' });
 
@@ -443,7 +480,7 @@ io.on('connection', (socket) => {
       }
     }
 
-    const r = engine.addPlayer(room, { name, emoji });
+    const r = engine.addPlayer(room, { name, pet });
     if (r.error) return cb?.(r);
     r.player.socketId = socket.id;
     socket.join(room.code);
@@ -507,7 +544,7 @@ io.on('connection', (socket) => {
         const who = room.players.find(p => p.id === socket.data.playerId);
         if (g && (g.artist || g.title)) {
           io.to(room.code).emit('turn:guessed', {
-            name: who?.name || '', emoji: who?.emoji || '',
+            name: who?.name || '', pet: who?.pet || '',
             artist: g.artist || '', title: g.title || ''
           });
         }
@@ -536,7 +573,7 @@ io.on('connection', (socket) => {
     if (Date.now() - r.startedAt < engine.HURRY_AFTER_MS) return cb?.({ error: 'Aguarde 15 segundos antes de apressar.' });
     r.hurry = true;
     const by = room.players.find(p => p.id === socket.data.playerId);
-    io.to(room.code).emit('hurry:started', { seconds: engine.HURRY_COUNTDOWN_MS / 1000, byName: by?.name || '', byEmoji: by?.emoji || '' });
+    io.to(room.code).emit('hurry:started', { seconds: engine.HURRY_COUNTDOWN_MS / 1000, byName: by?.name || '', byPet: by?.pet || '' });
     broadcast(room);
     room.timers.placing = setTimeout(() => {
       if (room.round?.phase === 'placing') { openGuessing(room); doReveal(room); }
@@ -560,20 +597,26 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('player:reaction', ({ emoji }) => {
+  socket.on('player:reaction', ({ text }) => {
     const room = engine.getRoom(socket.data.roomCode);
-    if (room) io.to(room.code).emit('reaction', { playerId: socket.data.playerId, emoji: String(emoji || '').slice(0, 4) });
+    const p = room?.players.find(x => x.id === socket.data.playerId);
+    if (room && p) io.to(room.code).emit('reaction', { playerId: p.id, pet: p.pet, text: String(text || '').slice(0, 16) });
   });
 
   socket.on('player:chat', ({ text }) => {
     const room = engine.getRoom(socket.data.roomCode);
     const p = room?.players.find(x => x.id === socket.data.playerId);
-    if (room && p) io.to(room.code).emit('chat', { name: p.name, emoji: p.emoji, text: String(text || '').slice(0, 140) });
+    if (room && p) io.to(room.code).emit('chat', { name: p.name, pet: p.pet, text: String(text || '').slice(0, 140) });
   });
 
   socket.on('disconnect', () => {
     const room = engine.getRoom(socket.data.roomCode);
     if (!room) return;
+    if (socket.data.isScreen) {
+      room.screens = room.screens.filter(x => x.socketId !== socket.id);
+      broadcast(room);
+      return;
+    }
     if (socket.data.isTV) {
       // TV caiu: mantem a sala por 5 minutos aguardando a TV reconectar
       setTimeout(() => {

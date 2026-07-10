@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vitrola, TV</title>
-<link rel="stylesheet" href="/base.css">
-<link rel="stylesheet" href="/tv.css">
+<link rel="stylesheet" href="/base.css?v=d8511a1e">
+<link rel="stylesheet" href="/tv.css?v=d8511a1e">
 </head>
 <body>
 
@@ -17,38 +17,38 @@
     <p class="mc-sub">Como voce quer comecar?</p>
 
     <div class="mc-cards">
-      <button class="mc-card mc-quick" data-quick="FESTA">
-        <span class="mc-icon">🎉</span>
+      <button class="mc-card mc-quick" data-quick="FESTA"><span class="mc-disc" style="--mc:#F0BE4E"></span>
+        
         <span class="mc-name">Festa Rapida</span>
         <span class="mc-desc">Brasileiras + internacionais. Sem login, sem ajustes.</span>
       </button>
-      <button class="mc-card mc-quick" data-quick="BR">
-        <span class="mc-icon">🇧🇷</span>
+      <button class="mc-card mc-quick" data-quick="BR"><span class="mc-disc" style="--mc:#52E09A"></span>
+        
         <span class="mc-name">Festa Brasileira</span>
         <span class="mc-desc">So musicas brasileiras, de Pixinguinha ao funk.</span>
       </button>
-      <button class="mc-card mc-quick" data-quick="INTL">
-        <span class="mc-icon">🌎</span>
+      <button class="mc-card mc-quick" data-quick="INTL"><span class="mc-disc" style="--mc:#4E7DE0"></span>
+        
         <span class="mc-name">Festa Internacional</span>
         <span class="mc-desc">So musicas de fora, dos anos 50 a hoje.</span>
       </button>
-      <button class="mc-card mc-quick" data-quick="PRO">
-        <span class="mc-icon">🏆</span>
+      <button class="mc-card mc-quick" data-quick="PRO"><span class="mc-disc" style="--mc:#E44FA3"></span>
+        
         <span class="mc-name">Modo PRO</span>
         <span class="mc-desc">Vale a carta so acertando posicao, artista e musica.</span>
       </button>
-      <button class="mc-card mc-quick" data-quick="EXPERT">
-        <span class="mc-icon">🎓</span>
+      <button class="mc-card mc-quick" data-quick="EXPERT"><span class="mc-disc" style="--mc:#8E5BD8"></span>
+        
         <span class="mc-name">Modo Expert</span>
         <span class="mc-desc">PRO + ano exato. Para quem manja mesmo de musica.</span>
       </button>
-      <button class="mc-card mc-quick" data-quick="EQUIPES">
-        <span class="mc-icon">👥</span>
+      <button class="mc-card mc-quick" data-quick="EQUIPES"><span class="mc-disc" style="--mc:#FF6B4A"></span>
+        
         <span class="mc-name">Modo Equipes</span>
         <span class="mc-desc">Linha do tempo e fichas compartilhadas entre times.</span>
       </button>
-      <button id="mc-custom" class="mc-card mc-custom">
-        <span class="mc-icon">🎛️</span>
+      <button id="mc-custom" class="mc-card mc-custom"><span class="mc-disc" style="--mc:#B9AA8F"></span>
+        
         <span class="mc-name">Sala Personalizada</span>
         <span class="mc-desc">Escolha modo, fonte de musica, repertorio e regras.</span>
       </button>
@@ -66,7 +66,7 @@
   <header class="tv-head">
     <div class="brand"><span class="mini-vinyl" aria-hidden="true"></span> VITROLA</div>
     <div class="head-right">
-      <button id="btn-home-lobby" class="home-btn" title="Voltar ao menu inicial">🏠 Menu</button>
+      <button id="btn-home-lobby" class="home-btn" title="Voltar ao menu inicial">Menu</button>
       <button id="vis-toggle" class="vis-pill" title="Alternar sala publica ou privada"></button>
       <div class="room-code num" id="lobby-code" title="Codigo da sala">-----</div>
     </div>
@@ -154,6 +154,11 @@
     <aside class="panel players-panel">
       <h2>Jogadores <span class="num" id="player-count">0/8</span></h2>
       <ul id="lobby-players"></ul>
+      <div class="screens-panel">
+        <h2>Telas conectadas</h2>
+        <ul id="screens-list"></ul>
+        <p class="hint">Para espelhar em outra TV: abra o site, escolha "Conectar outra tela" e digite o codigo <b class="num" id="screen-code"></b>. O som toca apenas na tela principal.</p>
+      </div>
       <div class="lobby-actions">
         <button id="btn-lock" class="btn-ghost">Travar entradas</button>
         <button id="btn-start" class="btn-gold">Iniciar partida</button>
@@ -168,7 +173,7 @@
     <div class="brand"><span class="mini-vinyl" aria-hidden="true"></span> VITROLA</div>
     <div class="round-info"><span id="game-round" class="num"></span> <span id="deck-left" class="num"></span></div>
     <div class="host-controls">
-      <button id="btn-home-game" class="home-btn" title="Voltar ao menu inicial">🏠</button>
+      <button id="btn-home-game" class="home-btn" title="Voltar ao menu inicial">Menu</button>
       <button id="btn-pause" class="btn-ghost slim-btn">Pausar</button>
       <button id="btn-skip" class="btn-ghost slim-btn">Pular rodada</button>
       <button id="btn-endroom" class="btn-ghost slim-btn">Encerrar sala</button>
@@ -217,7 +222,7 @@
   <div class="end-actions">
     <button id="btn-rematch" class="btn-gold">Revanche na mesma sala</button>
     <button id="btn-close" class="btn-ghost">Encerrar sala</button>
-    <button id="btn-home-end" class="btn-ghost">🏠 Menu inicial</button>
+    <button id="btn-home-end" class="btn-ghost">Menu inicial</button>
   </div>
 </section>
 
@@ -239,7 +244,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
-<script src="/fx.js"></script>
-<script src="/tv.js"></script>
+<script src="/fx.js?v=d8511a1e"></script>
+<script src="/tv.js?v=d8511a1e"></script>
 </body>
 </html>

@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Vitrola, Jogador</title>
-<link rel="stylesheet" href="/base.css">
-<link rel="stylesheet" href="/player.css">
+<link rel="stylesheet" href="/base.css?v=d8511a1e">
+<link rel="stylesheet" href="/player.css?v=d8511a1e">
 </head>
 <body>
 
@@ -17,25 +17,41 @@
     <label>Seu nome
       <input id="join-name" maxlength="16" placeholder="Como te chamam?" autocomplete="nickname">
     </label>
-    <p class="lbl">Escolha seu avatar</p>
-    <div id="emoji-grid" class="emoji-grid"></div>
+    <p class="lbl">Escolha seu pet</p>
+    <div id="pet-grid" class="pet-grid"></div>
     <button id="btn-join" class="btn-gold">Entrar no jogo</button>
     <p id="join-error" class="err"></p>
-    <a href="/" class="back-home">🏠 Trocar de sala</a>
+
+    <!-- este aparelho tambem pode ser uma tela extra exibindo a partida -->
+    <div class="device-mode">
+      <p class="lbl">Ou use este aparelho como tela</p>
+      <button id="btn-as-screen" type="button" class="btn-ghost">Usar como TV (espelho da partida)</button>
+    </div>
+
+    <!-- entrou pelo QR mas quer outra sala? troca aqui mesmo, sem sair da pagina -->
+    <div class="switch-room">
+      <p class="lbl">Ou entre em outra sala</p>
+      <form id="switch-form" class="switch-form">
+        <input id="switch-code" maxlength="6" placeholder="CODIGO" autocapitalize="characters" autocomplete="off" aria-label="Codigo de outra sala">
+        <button class="btn-ghost" type="submit">Ir</button>
+      </form>
+      <div id="public-rooms" class="public-rooms" aria-live="polite"></div>
+    </div>
+    <a href="/" class="back-home">Voltar ao menu inicial</a>
   </div>
 </section>
 
 <!-- ============ LOBBY ============ -->
 <section id="p-lobby" class="pscreen hidden">
   <div class="lobby-top">
-    <div class="me-chip"><span id="me-emoji"></span> <span id="me-name"></span></div>
-    <button id="btn-leave-lobby" class="back-home-btn" title="Sair e trocar de sala">🏠 Sair</button>
+    <div class="me-chip"><img id="me-pet" class="pet-avatar" src="" alt=""> <span id="me-name"></span></div>
+    <button id="btn-leave-lobby" class="back-home-btn" title="Sair e trocar de sala">Sair</button>
   </div>
   <h2>Aguardando o host iniciar...</h2>
   <a id="btn-spotify-me" class="spotify-me hidden" target="_blank" rel="noopener">
     <span class="sp-dot"></span> Conectar meu Spotify para a partida
   </a>
-  <p id="spotify-ok" class="spotify-ok hidden">✅ Spotify conectado nesta sala</p>
+  <p id="spotify-ok" class="spotify-ok hidden">Spotify conectado nesta sala</p>
   <div id="team-picker" class="team-picker hidden">
     <p class="lbl">Modo Equipes: escolha a sua</p>
     <div class="team-btns">
@@ -51,7 +67,7 @@
 <!-- ============ JOGO ============ -->
 <section id="p-game" class="pscreen hidden">
   <header class="p-head">
-    <div class="me-chip"><span id="g-emoji"></span> <span id="g-name"></span></div>
+    <div class="me-chip"><img id="g-pet" class="pet-avatar" src="" alt=""> <span id="g-name"></span></div>
     <div class="stats num"><span id="g-fichas"></span> · <span id="g-cartas"></span></div>
   </header>
 
@@ -62,12 +78,12 @@
     CONTESTAR<small>usa 1 ficha, e voce joga a carta</small>
   </button>
 
-  <button id="btn-hurry" class="btn-ghost hurry hidden">⏱ Apressar (liga cronometro de 30s)</button>
+  <button id="btn-hurry" class="btn-ghost hurry hidden">Apressar (liga cronometro de 30s)</button>
 
   <!-- botoes do jogador da vez -->
   <div class="turn-tools">
-    <button id="btn-replay" class="btn-ghost replay hidden">🔁 Tocar de novo</button>
-    <button id="btn-early-guess" class="btn-ghost replay hidden">✋ Ja sei! Cortar a musica e responder</button>
+    <button id="btn-replay" class="btn-ghost replay hidden">Tocar de novo</button>
+    <button id="btn-early-guess" class="btn-ghost replay hidden">Ja sei! Cortar a musica e responder</button>
   </div>
 
   <!-- posicionamento na linha do tempo -->
@@ -91,7 +107,7 @@
 
   <!-- proximo jogador inicia a rodada daqui -->
   <button id="btn-start-round" class="start-round hidden">
-    🎬 SUA VEZ AGORA<small>toque para iniciar a proxima rodada</small>
+    SUA VEZ AGORA<small>toque para iniciar a proxima rodada</small>
   </button>
 
   <!-- resultado da rodada -->
@@ -106,8 +122,8 @@
   <!-- reacoes e chat -->
   <footer class="p-foot">
     <div class="reactions">
-      <button data-r="🔥">🔥</button><button data-r="😂">😂</button>
-      <button data-r="😱">😱</button><button data-r="👏">👏</button><button data-r="🎯">🎯</button>
+      <button data-r="Uau!">Uau!</button><button data-r="Haha!">Haha!</button>
+      <button data-r="Nao acredito!">Nao acredito!</button><button data-r="Mandou bem!">Mandou bem!</button><button data-r="Na mosca!">Na mosca!</button>
     </div>
     <form id="chat-form" class="chat-form">
       <input id="chat-input" maxlength="140" placeholder="Mensagem rapida...">
@@ -124,7 +140,7 @@
 </section>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/fx.js"></script>
-<script src="/player.js"></script>
+<script src="/fx.js?v=d8511a1e"></script>
+<script src="/player.js?v=d8511a1e"></script>
 </body>
 </html>

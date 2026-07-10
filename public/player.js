@@ -1,6 +1,13 @@
 /* Vitrola, celular do jogador */
 const socket = io();
 const $ = (s) => document.querySelector(s);
+// listener seguro: um elemento ausente (ex: cache misto de HTML/JS) nao derruba o script inteiro
+function on(sel, ev, fn) {
+  const el = document.querySelector(sel);
+  if (el) el.addEventListener(ev, fn);
+  else console.warn('elemento ausente:', sel);
+}
+
 const decColor = (y) => `var(--d${Math.min(2020, Math.max(1930, Math.floor(y / 10) * 10))})`;
 
 const CODE = new URLSearchParams(location.search).get('sala')?.toUpperCase() || '';
@@ -14,13 +21,56 @@ let iContested = false;
 let iPlacedContest = false;
 let iGuessed = false;
 
+// usar este aparelho como tela extra: espelha a partida (o codigo da sala tambem vale)
+on('#btn-as-screen', 'click', () => {
+  if (confirm('Usar este aparelho como tela? Ele passa a exibir a partida, sem controlar nada.')) {
+    location.href = `/tv?tela=${CODE}`;
+  }
+});
+
+// ---------------- troca de sala / salas publicas (tela de entrada) ----------------
+on('#switch-form', 'submit', (e) => {
+  e.preventDefault();
+  const c = $('#switch-code').value.replace(/[^a-z0-9]/gi, '').toUpperCase();
+  if (c && c !== CODE) location.href = '/' + c;
+});
+
+const MODO_LABEL = { ORIGINAL: 'Original', PRO: 'PRO', EXPERT: 'Expert', EQUIPES: 'Equipes' };
+async function loadPublicRoomsPlayer() {
+  // so busca enquanto a tela de entrada estiver visivel
+  if ($('#p-join').classList.contains('hidden')) return;
+  try {
+    const rooms = await (await fetch('/api/rooms/public')).json();
+    const box = $('#public-rooms');
+    const others = rooms.filter(r => r.code !== CODE);
+    if (!others.length) { box.innerHTML = '<p class="public-empty">Nenhuma outra sala publica agora.</p>'; return; }
+    box.innerHTML = '<p class="lbl">Salas publicas abertas</p>' + others.map(r => `
+      <button type="button" class="room-row" data-code="${r.code}">
+        <span class="rc num">${r.code}</span>
+        <span class="rmodo">${MODO_LABEL[r.modo] || r.modo} · meta ${r.meta}</span>
+        <span class="rcount num">${r.players}/${r.max}</span>
+      </button>`).join('');
+    box.querySelectorAll('.room-row').forEach(b =>
+      b.addEventListener('click', () => location.href = '/' + b.dataset.code));
+  } catch { /* mantem a lista anterior em falha temporaria */ }
+}
+loadPublicRoomsPlayer();
+setInterval(loadPublicRoomsPlayer, 5000);
+
 // ---------------- entrada ----------------
-const EMOJIS = ['🎸','🎤','🎧','🥁','🎺','🎻','🪩','📻','🎹','🎷','🕺','💃','🎩','🦜','🐆','🦈','🐙','🦊','🍕','🌵','🚀','⚡','🔥','👽'];
-const grid = $('#emoji-grid');
-EMOJIS.forEach((e, i) => {
+const PETS = ['cat','dog','fox','bunny','panda','lion','tiger','koala','penguin','monkey','pig','cow','deer','elephant','giraffe','bee','parrot','fish','crab','beaver','chick','polar','hog','caterpillar'];
+const grid = $('#pet-grid');
+PETS.forEach((petId, i) => {
   const b = document.createElement('button');
-  b.textContent = e;
   b.type = 'button';
+  b.dataset.pet = petId;
+  b.classList.add('loading');   // spinner ate a imagem chegar
+  const img = document.createElement('img');
+  img.alt = petId;
+  img.addEventListener('load', () => b.classList.remove('loading'));
+  img.addEventListener('error', () => b.classList.remove('loading'));
+  img.src = `/pets/${petId}.png`;
+  b.appendChild(img);
   if (i === 0) b.classList.add('sel');
   b.addEventListener('click', () => {
     grid.querySelectorAll('button').forEach(x => x.classList.remove('sel'));
@@ -30,24 +80,33 @@ EMOJIS.forEach((e, i) => {
 });
 
 const saved = JSON.parse(sessionStorage.getItem(`vitrola_${CODE}`) || 'null');
-if (saved?.token) join(saved.name, saved.emoji, saved.token);
+if (saved?.token) join(saved.name, saved.pet, saved.token);
 
-$('#btn-join').addEventListener('click', () => {
+on('#btn-join', 'click', () => {
   const name = $('#join-name').value.trim();
   if (!name) return $('#join-error').textContent = 'Digite um nome para entrar.';
-  const emoji = grid.querySelector('.sel')?.textContent || '🎵';
-  join(name, emoji, null);
+  const pet = grid.querySelector('.sel')?.dataset.pet || 'cat';
+  join(name, pet, null);
 });
 
-function join(name, emoji, token) {
-  socket.emit('player:join', { code: CODE, name, emoji, token }, (res) => {
+function join(name, pet, token) {
+  socket.emit('player:join', { code: CODE, name, pet, token }, (res) => {
     if (res?.error) { $('#join-error').textContent = res.error; return; }
-    ME = { playerId: res.playerId, token: res.token, name, emoji };
-    sessionStorage.setItem(`vitrola_${CODE}`, JSON.stringify({ token: res.token, name, emoji }));
-    ['#me-emoji', '#g-emoji'].forEach(s => $(s).textContent = emoji);
+    ME = { playerId: res.playerId, token: res.token, name, pet };
+    sessionStorage.setItem(`vitrola_${CODE}`, JSON.stringify({ token: res.token, name, pet }));
+    ['#me-pet', '#g-pet'].forEach(s => { const el = $(s); if (el) el.src = `/pets/${pet}.png`; });
     ['#me-name', '#g-name'].forEach(s => $(s).textContent = name);
     render(res.state);
   });
+}
+
+// animacao do meu pet conforme o momento do jogo
+function petMood(mood) {
+  const el = $('#g-pet');
+  if (!el) return;
+  el.classList.remove('happy', 'sad', 'excited');
+  if (mood) { void el.offsetWidth; el.classList.add(mood); }
+  if (mood === 'happy' || mood === 'sad') setTimeout(() => el.classList.remove(mood), 1000);
 }
 
 // reconexao do socket
@@ -56,7 +115,7 @@ socket.on('connect', () => {
 });
 
 // sair do lobby e voltar ao menu inicial (so antes da partida comecar)
-$('#btn-leave-lobby').addEventListener('click', () => {
+on('#btn-leave-lobby', 'click', () => {
   if (confirm('Sair desta sala e voltar ao menu inicial?')) {
     sessionStorage.removeItem(`vitrola_${CODE}`);
     location.href = '/';
@@ -104,12 +163,12 @@ function render(state) {
     ul.innerHTML = '';
     state.players.forEach(x => {
       ul.insertAdjacentHTML('beforeend',
-        `<li><span>${esc(x.emoji)}</span><span>${esc(x.name)}${x.id === ME.playerId ? ' (voce)' : ''}</span>${x.team ? `<span class="team-tag">${esc(x.team)}</span>` : ''}</li>`);
+        `<li><img class="pet-avatar" src="/pets/${esc(x.pet)}.png" alt=""><span>${esc(x.name)}${x.id === ME.playerId ? ' (voce)' : ''}</span>${x.team ? `<span class="team-tag">${esc(x.team)}</span>` : ''}</li>`);
     });
   }
 
   if (state.state === 'playing' || state.state === 'paused') {
-    $('#g-fichas').textContent = `⛃ ${p.fichas} fichas`;
+    $('#g-fichas').textContent = `${p.fichas} fichas`;
     $('#g-cartas').textContent = `${p.cartas}/${state.config.meta} cartas`;
     renderMyTimeline();
     syncPhase(state);
@@ -119,7 +178,7 @@ function render(state) {
     const winners = state.config.modo === 'EQUIPES'
       ? state.winner === p.team
       : state.winner === p.id;
-    $('#end-msg').textContent = winners ? '🏆 Voce venceu!' : 'Fim de jogo! Veja o placar na TV.';
+    $('#end-msg').textContent = winners ? 'Voce venceu!' : 'Fim de jogo! Veja o placar na TV.';
     if (winners && !window._celebrated) { window._celebrated = true; FX.confetti(120); FX.vibrate([80, 60, 80, 60, 200]); }
   }
 }
@@ -149,11 +208,12 @@ function syncPhase(state) {
   if (state.phase === 'placing') {
     if (isMyTurn && placingAs !== 'turn') {
       FX.vibrate([60, 80, 60]);
+      petMood('excited');
       openPlacer('turn', 'Sua vez! Sem pressa: o cronometro so liga se alguem apressar depois de 15s.');
     }
     if (!isMyTurn) {
       const t = state.players.find(x => x.id === state.turnPlayerId);
-      status(`🎶 Vez de ${t?.name || '...'}. Contestar libera quando a carta for posicionada.`, '');
+      status(`Vez de ${t?.name || '...'}. Contestar libera quando a carta for posicionada.`, '');
       hidePlacer();
       // apos 15s da rodada, libera o botao de apressar (se ninguem acionou ainda)
       clearTimeout(window._hurryTimer);
@@ -222,7 +282,7 @@ function openPlacer(mode, label) {
   buildTimelineSlots();
   show('#placer', true);
   show('#guesser', false);
-  status(mode === 'turn' ? '🎧 Ouca o trecho na TV e escolha o intervalo.' : '🔥 Contestacao: escolha o intervalo na sua linha.', mode === 'turn' ? '' : 'hot');
+  status(mode === 'turn' ? 'Ouca o trecho na TV e escolha o intervalo.' : 'Contestacao: escolha o intervalo na sua linha.', mode === 'turn' ? '' : 'hot');
 }
 
 function hidePlacer() { show('#placer', false); placingAs = null; }
@@ -253,7 +313,7 @@ function buildTimelineSlots() {
   });
 }
 
-$('#btn-confirm-slot').addEventListener('click', () => {
+on('#btn-confirm-slot', 'click', () => {
   if (selectedSlot === null) return;
   const ev = placingAs === 'turn' ? 'player:place' : 'player:contest-place';
   socket.emit(ev, { slot: selectedSlot }, (res) => {
@@ -267,7 +327,7 @@ $('#btn-confirm-slot').addEventListener('click', () => {
 });
 
 // ---------------- contestacao ----------------
-$('#btn-contest').addEventListener('click', () => {
+on('#btn-contest', 'click', () => {
   const btn = $('#btn-contest');
   btn.disabled = true;
   btn.classList.add('fx-ring', 'fired');
@@ -300,7 +360,7 @@ function openGuesser(state) {
   status('Janela de palpites aberta.', '');
 }
 
-$('#btn-guess').addEventListener('click', () => {
+on('#btn-guess', 'click', () => {
   socket.emit('player:guess', {
     artist: $('#guess-artist').value,
     title: $('#guess-title').value,
@@ -311,20 +371,20 @@ $('#btn-guess').addEventListener('click', () => {
     show('#guesser', false);
     show('#btn-early-guess', false);
     if (res.stopMusic) { FX.flash('color-mix(in srgb, var(--gold) 55%, transparent)'); FX.vibrate([30, 40, 30]); }
-    status(res.stopMusic ? '🎤 Musica cortada! Palpite registrado.' : 'Palpite enviado. Aguardando a revelacao...', 'ok');
+    status(res.stopMusic ? 'Musica cortada! Palpite registrado.' : 'Palpite enviado. Aguardando a revelacao...', 'ok');
     $('#guess-artist').value = ''; $('#guess-title').value = ''; $('#guess-year').value = '';
   });
 });
 
 // jogador da vez: responder antes da hora corta a musica na TV e dificulta contestacoes
-$('#btn-early-guess').addEventListener('click', () => {
+on('#btn-early-guess', 'click', () => {
   const modo = STATE?.config.modo || 'ORIGINAL';
   $('#guess-year').classList.toggle('hidden', modo !== 'EXPERT');
   $('#guess-label').textContent = 'Responda para cortar a musica agora. Errar nao tira nada, acertar rende ficha.';
   show('#guesser', true);
 });
 
-$('#btn-skip-guess').addEventListener('click', () => {
+on('#btn-skip-guess', 'click', () => {
   show('#guesser', false);
   socket.emit('player:skip-guess');
   status('Sem palpite. Aguardando a revelacao...', '');
@@ -341,7 +401,7 @@ function showReveal(results) {
   let verdict = 'Rodada dos outros. Veja a TV!';
   let cls = '';
   if (mine) {
-    if (mine.keeps || mine.wins) { verdict = '🎉 Carta e sua!'; cls = 'ok'; }
+    if (mine.keeps || mine.wins) { verdict = 'Carta e sua!'; cls = 'ok'; }
     else if (mine.posOk) { verdict = 'Posicao certa, mas a carta nao ficou.'; cls = ''; }
     else if (mine.slot === null) { verdict = 'Tempo esgotado, sem jogada.'; cls = 'bad'; }
     else { verdict = 'Posicao errada. Carta descartada.'; cls = 'bad'; }
@@ -353,8 +413,10 @@ function showReveal(results) {
   }
 
   if (mine) {
-    if (mine.keeps || mine.wins) { FX.flash('color-mix(in srgb, var(--ok) 50%, transparent)'); FX.vibrate([50, 50, 120]); FX.confetti(45); }
-    else if (!mine.posOk) { FX.flash('color-mix(in srgb, var(--bad) 45%, transparent)'); FX.vibrate(180); FX.shake(); }
+    if (mine.keeps || mine.wins) { FX.flash('color-mix(in srgb, var(--ok) 50%, transparent)'); FX.vibrate([50, 50, 120]); FX.confetti(45); petMood('happy'); }
+    else if (!mine.posOk) { FX.flash('color-mix(in srgb, var(--bad) 45%, transparent)'); FX.vibrate(180); FX.shake(); petMood('sad'); }
+  } else {
+    petMood(null);
   }
   const box = $('#p-reveal');
   box.classList.remove('flip-in'); void box.offsetWidth; box.classList.add('flip-in');
@@ -370,35 +432,35 @@ function showReveal(results) {
 }
 
 // ---------------- extras ----------------
-$('#btn-start-round').addEventListener('click', () => {
+on('#btn-start-round', 'click', () => {
   show('#btn-start-round', false);
   FX.flash('color-mix(in srgb, var(--gold) 45%, transparent)');
   socket.emit('player:next-round');
 });
 
-$('#btn-replay').addEventListener('click', () => socket.emit('player:replay'));
+on('#btn-replay', 'click', () => socket.emit('player:replay'));
 
-$('#btn-hurry').addEventListener('click', () => {
+on('#btn-hurry', 'click', () => {
   show('#btn-hurry', false);
   socket.emit('player:hurry', (res) => {
     if (res?.error) status(res.error, 'hot');
-    else { FX.vibrate(30); status('⏱ Cronometro de 30s acionado!', 'hot'); }
+    else { FX.vibrate(30); status('Cronometro de 30s acionado!', 'hot'); }
   });
 });
 
-socket.on('hurry:started', ({ byName, byEmoji }) => {
+socket.on('hurry:started', ({ byName }) => {
   show('#btn-hurry', false);
   if (STATE?.turnPlayerId === ME.playerId) {
     FX.vibrate([80, 60, 80]);
     FX.flash('color-mix(in srgb, var(--hot) 40%, transparent)');
-    status(`⏱ ${byEmoji} ${byName} acionou o cronometro: 30 segundos!`, 'hot');
+    status(`${byName} acionou o cronometro: 30 segundos!`, 'hot');
   }
 });
 
 document.querySelectorAll('.reactions button').forEach(b =>
-  b.addEventListener('click', () => socket.emit('player:reaction', { emoji: b.dataset.r })));
+  b.addEventListener('click', () => socket.emit('player:reaction', { text: b.dataset.r })));
 
-$('#chat-form').addEventListener('submit', (e) => {
+on('#chat-form', 'submit', (e) => {
   e.preventDefault();
   const text = $('#chat-input').value.trim();
   if (text) socket.emit('player:chat', { text });

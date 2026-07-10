@@ -11,12 +11,13 @@ const CONTEST_WINDOW_MS = 30000;   // conta apenas depois da jogada do jogador d
 const GUESS_WINDOW_MS = 30000;
 
 const rooms = new Map();
+const screenCodes = new Map();   // codigo de tela -> codigo da sala
 
 function code4() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let c = '';
   for (let i = 0; i < 5; i++) c += chars[crypto.randomInt(chars.length)];
-  return rooms.has(c) ? code4() : c;
+  return (rooms.has(c) || screenCodes.has(c)) ? code4() : c;
 }
 
 const DEFAULT_CONFIG = {
@@ -53,15 +54,23 @@ function createRoom(tvSocketId) {
     winner: null,
     timers: {},
     log: [],
-    playedIds: new Set()   // historico da sessao: nenhuma musica repete enquanto a sala existir
+    playedIds: new Set(),  // historico da sessao: nenhuma musica repete enquanto a sala existir
+    screenCode: code4(),   // codigo separado para conectar telas extras (espelhos)
+    screens: []            // {socketId, n} telas espelho conectadas
   };
   rooms.set(room.code, room);
+  screenCodes.set(room.screenCode, room.code);
   return room;
+}
+
+function getRoomByScreenCode(code) {
+  const roomCode = screenCodes.get(String(code || '').toUpperCase());
+  return roomCode ? rooms.get(roomCode) : null;
 }
 
 function getRoom(code) { return rooms.get(String(code || '').toUpperCase()); }
 
-function addPlayer(room, { name, emoji }) {
+function addPlayer(room, { name, pet }) {
   if (room.locked || room.state !== 'lobby') return { error: 'A sala nao esta aceitando novos jogadores.' };
   if (room.players.filter(p => p.connected).length >= MAX_PLAYERS) return { error: 'Sala cheia: maximo de 8 jogadores.' };
   const player = {
@@ -69,7 +78,7 @@ function addPlayer(room, { name, emoji }) {
     token: crypto.randomUUID(),
     socketId: null,
     name: String(name || 'Jogador').slice(0, 16),
-    emoji: emoji || '🎵',
+    pet: String(pet || 'cat').replace(/[^a-z]/g, '') || 'cat',
     team: null,
     timeline: [],
     fichas: 0,
@@ -438,8 +447,10 @@ function publicState(room) {
     contests: room.round ? room.round.contests.map(c => ({ playerId: c.playerId, entityId: c.entityId, placed: c.slot !== null, tieBroken: c.tieBroken })) : [],
     deckLeft: room.deck.length,
     winner: room.winner,
+    screenCode: room.screenCode,
+    screens: room.screens.map(s => ({ n: s.n })),
     players: room.players.filter(p => p.connected || p.timeline.length).map(p => ({
-      id: p.id, name: p.name, emoji: p.emoji, team: p.team, connected: p.connected,
+      id: p.id, name: p.name, pet: p.pet, team: p.team, connected: p.connected,
       fichas: modo === 'EQUIPES' ? (room.teams[p.team]?.fichas ?? 0) : p.fichas,
       cartas: modo === 'EQUIPES' ? (room.teams[p.team]?.timeline.length ?? 0) : p.timeline.length,
       timeline: (modo === 'EQUIPES' ? (room.teams[p.team]?.timeline ?? []) : p.timeline)
@@ -455,7 +466,10 @@ function publicState(room) {
 
 function removeRoom(code) {
   const room = rooms.get(code);
-  if (room) Object.values(room.timers).forEach(clearTimeout);
+  if (room) {
+    Object.values(room.timers).forEach(clearTimeout);
+    screenCodes.delete(room.screenCode);
+  }
   rooms.delete(code);
 }
 
@@ -474,6 +488,6 @@ function listPublicRooms() {
 module.exports = {
   rooms, createRoom, getRoom, addPlayer, startGame, startRound,
   placeTurnCard, requestContest, placeContestCard, submitGuess, allEligibleGuessed, reveal,
-  publicState, timelineOf, removeRoom, entities, listPublicRooms, peekNextTurn, drawCard,
+  publicState, timelineOf, removeRoom, entities, listPublicRooms, peekNextTurn, drawCard, getRoomByScreenCode,
   HURRY_AFTER_MS, HURRY_COUNTDOWN_MS, CONTEST_WINDOW_MS, GUESS_WINDOW_MS, MAX_PLAYERS
 };

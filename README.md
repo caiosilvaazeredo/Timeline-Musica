@@ -20,6 +20,14 @@ Em qualquer um dos dois, a sala pode ser **privada** (so quem tem o codigo entra
 
 O QR code e o atalho de entrada usam sempre a URL real que a TV esta servindo naquele momento (nunca localhost por variavel de ambiente esquecida); um dominio curto customizado via `JOIN_URL` e opcional, para quem quiser o modelo kahoot.it/kahoot.com com dois enderecos.
 
+## Multiplas telas (espelhos)
+
+Cada sala tem dois codigos independentes: o **codigo de jogador** (QR/entrada dos celulares) e o **codigo de tela**, exibido no lobby da TV principal. Qualquer outra TV, monitor ou notebook pode abrir o site, usar "Conectar outra tela" e digitar o codigo de tela para espelhar a mesma partida em tempo real (lobby, rodadas, vinil, placar e revelacoes sincronizados). O painel "Telas conectadas" do lobby lista a principal e os espelhos, com botao de remover; o som toca apenas na tela principal para nao duplicar o audio.
+
+## Pets
+
+Os avatares sao 24 pets (pack Cube Pets do Kenney, CC0, kenney.nl) escolhidos na entrada. O pet do jogador aparece animado no celular durante toda a partida e reage aos momentos do jogo: fica agitado quando chega a vez, pula ao ganhar carta, murcha ao errar. Na TV, os pets acompanham cada nome no lobby, no banner da vez, no placar, nas contestacoes, no chat, nas reacoes e no podio. A interface nao usa icones/emojis: reacoes sao frases, moedas e discos sao desenhados em CSS.
+
 ## Como funciona
 
 1. Abra `/tv` na TV (navegador da smart TV, Chromecast, notebook no HDMI). A sala e criada automaticamente com codigo e QR code.

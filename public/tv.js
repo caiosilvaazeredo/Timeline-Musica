@@ -1,6 +1,14 @@
 /* Vitrola, TV */
 const socket = io();
 const $ = (s) => document.querySelector(s);
+// listener seguro: um elemento ausente (ex: cache misto de HTML/JS) nao derruba o script inteiro
+function on(sel, ev, fn) {
+  const el = document.querySelector(sel);
+  if (el) el.addEventListener(ev, fn);
+  else console.warn('elemento ausente:', sel);
+}
+
+const petImg = (p, cls='pet-img') => p ? `<img class="${cls}" src="/pets/${p}.png" alt="">` : '';
 const decColor = (y) => `var(--d${Math.min(2020, Math.max(1930, Math.floor(y / 10) * 10))})`;
 
 let ROOM = null;           // codigo da sala
@@ -21,7 +29,38 @@ function buildJoinInfo(code, joinOverride) {
   return { url: `${base}/${code}`, host };
 }
 
+const MIRROR_CODE = new URLSearchParams(location.search).get('tela');
+let IS_MIRROR = false;
+if (MIRROR_CODE) {
+  IS_MIRROR = true;
+  socket.emit('screen:join', { code: MIRROR_CODE }, (res) => {
+    if (res?.error) { alert(res.error); location.href = '/'; return; }
+    enterMirrorMode(res.state);
+  });
+}
+
+function enterMirrorMode(state) {
+  // tela espelho: mostra tudo, controla nada e nao toca audio
+  document.body.classList.add('mirror');
+  $('#scr-mode-choice')?.classList.add('hidden');
+  ['#btn-pause','#btn-skip','#btn-endroom','#btn-home-game','#btn-next'].forEach(sel => $(sel)?.classList.add('hidden'));
+  const lobbyActions = document.querySelector('.lobby-actions');
+  if (lobbyActions) lobbyActions.classList.add('hidden');
+  ROOM = state.code;
+  render(state);
+  if (state.state === 'playing' || state.state === 'paused') {
+    $('#scr-lobby').classList.add('hidden');
+    $('#scr-game').classList.remove('hidden');
+  } else {
+    $('#scr-lobby').classList.remove('hidden');
+  }
+}
+
+socket.on('screen:vinyl', ({ on }) => { if (IS_MIRROR) showVinyl(on); });
+socket.on('screen:removed', () => { alert('Esta tela foi desconectada pelo host.'); location.href = '/'; });
+
 const savedCode = sessionStorage.getItem('vitrola_tv_room');
+if (MIRROR_CODE) { /* espelho nao cria nem retoma sala */ } else
 if (savedCode) {
   socket.emit('tv:reclaim', { code: savedCode }, (res) => {
     if (res?.ok) bootRoom(savedCode, res, res.state);
@@ -44,7 +83,7 @@ document.querySelectorAll('.vis-btn').forEach(b => {
 
 document.querySelectorAll('.mc-quick').forEach(b =>
   b.addEventListener('click', () => startWithMode(b.dataset.quick)));
-$('#mc-custom').addEventListener('click', () => startWithMode(null));
+on('#mc-custom', 'click', () => startWithMode(null));
 
 function startWithMode(quick) {
   $('#scr-mode-choice').classList.add('hidden');
@@ -55,13 +94,13 @@ function startWithMode(quick) {
   }
 }
 
-$('#btn-collapse-config').addEventListener('click', () => {
+on('#btn-collapse-config', 'click', () => {
   const body = $('#config-body');
   body.classList.toggle('hidden');
   $('#btn-collapse-config').textContent = body.classList.contains('hidden') ? 'Ajustar configuracoes ▾' : 'Ocultar configuracoes ▴';
 });
 
-$('#vis-toggle').addEventListener('click', () => {
+on('#vis-toggle', 'click', () => {
   const next = STATE?.visibility === 'public' ? 'private' : 'public';
   socket.emit('tv:set-visibility', { visibility: next });
 });
@@ -164,7 +203,7 @@ function updateFonteStatus() {
   }
 }
 
-$('#btn-spotify').addEventListener('click', () => {
+on('#btn-spotify', 'click', () => {
   window.open(`/auth/spotify?sala=${ROOM}`, '_blank');
 });
 
@@ -175,10 +214,10 @@ socket.on('spotify:connected', async () => {
 });
 
 // ---------------- lobby ----------------
-$('#btn-lock').addEventListener('click', () => {
+on('#btn-lock', 'click', () => {
   socket.emit('tv:lock', { locked: !STATE?.locked });
 });
-$('#btn-start').addEventListener('click', () => {
+on('#btn-start', 'click', () => {
   const fonte = $('#cfg-fonte').value;
   if (fonte === 'SPOTIFY' && !spotifyReady && !STATE?.spotifyConnected) {
     return toast('Conecte o Spotify de um jogador antes de comecar (QR na configuracao).');
@@ -188,21 +227,21 @@ $('#btn-start').addEventListener('click', () => {
 });
 
 // ---------------- controles do host ----------------
-$('#btn-pause').addEventListener('click', () => socket.emit('tv:pause'));
-$('#btn-resume').addEventListener('click', () => socket.emit('tv:resume'));
-$('#btn-skip').addEventListener('click', () => { stopAudio(); socket.emit('tv:skip'); });
-$('#btn-next').addEventListener('click', () => socket.emit('tv:next-round'));
-$('#btn-endroom').addEventListener('click', () => { if (confirm('Encerrar a sala para todos?')) socket.emit('tv:end'); });
+on('#btn-pause', 'click', () => socket.emit('tv:pause'));
+on('#btn-resume', 'click', () => socket.emit('tv:resume'));
+on('#btn-skip', 'click', () => { stopAudio(); socket.emit('tv:skip'); });
+on('#btn-next', 'click', () => socket.emit('tv:next-round'));
+on('#btn-endroom', 'click', () => { if (confirm('Encerrar a sala para todos?')) socket.emit('tv:end'); });
 
 // voltar ao menu inicial: encerra a sala atual e volta pra tela de escolha de modo
 function goHome() {
   if (confirm('Voltar ao menu inicial? Isso encerra a sala atual para todos.')) socket.emit('tv:end');
 }
-$('#btn-home-lobby').addEventListener('click', goHome);
-$('#btn-home-game').addEventListener('click', goHome);
-$('#btn-home-end').addEventListener('click', goHome);
-$('#btn-rematch').addEventListener('click', () => socket.emit('tv:rematch'));
-$('#btn-close').addEventListener('click', () => socket.emit('tv:end'));
+on('#btn-home-lobby', 'click', goHome);
+on('#btn-home-game', 'click', goHome);
+on('#btn-home-end', 'click', goHome);
+on('#btn-rematch', 'click', () => socket.emit('tv:rematch'));
+on('#btn-close', 'click', () => socket.emit('tv:end'));
 
 // ---------------- eventos do jogo ----------------
 socket.on('state', render);
@@ -220,7 +259,7 @@ socket.on('round:start', async ({ number, turnPlayerId }) => {
   $('#turn-guess').textContent = '';
   const p = STATE?.players.find(x => x.id === turnPlayerId);
   const tb = $('#turn-banner');
-  tb.innerHTML = `Rodada ${number}: vez de <strong>${esc(p?.name || '?')}</strong> ${p?.emoji || ''}`;
+  tb.innerHTML = `Rodada ${number}: vez de <strong>${esc(p?.name || '?')}</strong> ${petImg(p?.pet, 'pet-img big')}`;
   tb.classList.remove('slide-pop'); void tb.offsetWidth; tb.classList.add('slide-pop');
   $('#phase-status').textContent = 'Sorteando o proximo disco...';
   await playCurrentTrack();
@@ -233,19 +272,19 @@ socket.on('turn:placed', () => {
 });
 
 // outro jogador acionou o cronometro de 30s
-socket.on('hurry:started', ({ seconds, byName, byEmoji }) => {
-  toast(`${byEmoji} ${byName} acionou o cronometro!`);
+socket.on('hurry:started', ({ seconds, byName }) => {
+  toast(`${byName} acionou o cronometro!`);
   FX.flash('color-mix(in srgb, var(--hot) 35%, transparent)');
-  countdown($('#phase-status'), seconds, '⏱ Cronometro acionado! Tempo para jogar');
+  countdown($('#phase-status'), seconds, 'Cronometro acionado! Tempo para jogar');
 });
 
 // palpite do jogador da vez exposto na tela junto do corte da musica
-socket.on('turn:guessed', ({ name, emoji, artist, title }) => {
+socket.on('turn:guessed', ({ name, pet, artist, title }) => {
   const el = $('#turn-guess');
   const parts = [];
   if (title) parts.push(`"${title}"`);
   if (artist) parts.push(`de ${artist}`);
-  el.textContent = `🎤 ${emoji} ${name} arriscou: ${parts.join(' ')}`;
+  el.innerHTML = `${petImg(pet)} ${esc(name)} arriscou: ${esc(parts.join(' '))}`;
   el.classList.remove('hidden', 'slide-pop'); void el.offsetWidth; el.classList.add('slide-pop');
 });
 
@@ -257,7 +296,7 @@ socket.on('contest:new', ({ playerId, tie }) => {
   const p = STATE?.players.find(x => x.id === playerId);
   const chip = document.createElement('span');
   chip.className = 'contest-chip' + (tie ? ' tie' : '');
-  chip.textContent = `${p?.emoji || ''} ${p?.name || '?'} contestou!`;
+  chip.innerHTML = `${petImg(p?.pet, 'pet-img')} ${esc(p?.name || '?')} contestou!`;
   $('#contest-strip').appendChild(chip);
   FX.flash('color-mix(in srgb, var(--hot) 55%, transparent)');
   FX.shake();
@@ -283,7 +322,7 @@ socket.on('round:reveal', (results) => {
 
   const ul = $('#reveal-results');
   ul.innerHTML = '';
-  const name = (id) => { const p = STATE?.players.find(x => x.id === id); return p ? `${p.emoji} ${p.name}` : id; };
+  const name = (id) => { const p = STATE?.players.find(x => x.id === id); return p ? `${petImg(p.pet)} ${esc(p.name)}` : id; };
   const t = results.turn;
   ul.insertAdjacentHTML('beforeend',
     `<li class="${t.keeps ? 'ok' : 'bad'}">${name(t.playerId)} ${t.slot === null ? 'nao posicionou a tempo' : t.posOk ? 'acertou a posicao' : 'errou a posicao'}${t.keeps ? ' e ficou com a carta' : ''}</li>`);
@@ -292,7 +331,7 @@ socket.on('round:reveal', (results) => {
       `<li class="${c.wins ? 'ok' : c.posOk ? '' : 'bad'}">${name(c.playerId)} contestou${c.tieBroken ? ' (sorteio)' : ''}: ${c.slot === null ? 'nao jogou' : c.posOk ? 'posicao correta' : 'posicao errada'}${c.wins ? ' e levou a carta!' : ''}</li>`);
   });
   results.fichasGanhas.forEach((f, i) => {
-    const what = f.title && f.artist ? 'musica e artista: +2 fichas 🪙🪙' : f.title ? 'a musica: +1 ficha 🪙' : 'o artista: +1 ficha 🪙';
+    const what = f.title && f.artist ? 'musica e artista: +2 fichas' : f.title ? 'a musica: +1 ficha' : 'o artista: +1 ficha';
     ul.insertAdjacentHTML('beforeend', `<li class="ok gain-line">${name(f.playerId)} acertou ${what}</li>`);
     setTimeout(() => coinFly(f.playerId, f.total), 500 + i * 350);
   });
@@ -308,19 +347,19 @@ socket.on('game:over', ({ winner, state }) => {
   setTimeout(() => { showEnd(winner); FX.confetti(200); }, 2500);
 });
 
-socket.on('reaction', ({ emoji }) => {
+socket.on('reaction', ({ pet, text }) => {
   const el = document.createElement('span');
-  el.className = 'float-emoji';
-  el.textContent = emoji;
-  el.style.left = (10 + Math.random() * 80) + 'vw';
+  el.className = 'float-chip';
+  el.innerHTML = `${petImg(pet)} ${esc(text)}`;
+  el.style.left = (8 + Math.random() * 70) + 'vw';
   $('#reactions-layer').appendChild(el);
   setTimeout(() => el.remove(), 3000);
 });
 
-socket.on('chat', ({ name, emoji, text }) => {
+socket.on('chat', ({ name, pet, text }) => {
   const el = document.createElement('div');
   el.className = 'chat-msg';
-  el.innerHTML = `<b>${esc(emoji)} ${esc(name)}:</b> ${esc(text)}`;
+  el.innerHTML = `${petImg(pet)} <b>${esc(name)}:</b> ${esc(text)}`;
   const ticker = $('#chat-ticker');
   ticker.appendChild(el);
   while (ticker.children.length > 4) ticker.firstChild.remove();
@@ -334,7 +373,7 @@ socket.on('playback:stop', () => {
   disc.classList.add('scratch');
   FX.flash('color-mix(in srgb, var(--gold) 60%, transparent)');
   setTimeout(() => { disc.classList.remove('scratch'); stopAudio(); }, 520);
-  $('#phase-status').textContent = '🎤 O jogador da vez cortou a musica para responder!';
+  $('#phase-status').textContent = 'O jogador da vez cortou a musica para responder!';
 });
 
 socket.on('room:closed', () => {
@@ -362,13 +401,23 @@ function render(state) {
   ul.innerHTML = '';
   state.players.forEach(p => {
     const li = document.createElement('li');
-    li.innerHTML = `<span class="emoji">${esc(p.emoji)}</span> <span>${esc(p.name)}</span>
+    li.innerHTML = `${petImg(p.pet)} <span>${esc(p.name)}</span>
       ${p.team ? `<span class="team-tag">${esc(p.team)}</span>` : ''}
       ${state.state === 'lobby' ? `<button class="kick" title="Remover" data-id="${p.id}">✕</button>` : ''}`;
     ul.appendChild(li);
   });
   ul.querySelectorAll('.kick').forEach(b => b.addEventListener('click', () => socket.emit('tv:kick', { playerId: b.dataset.id })));
   if (state.state === 'lobby') updateFonteStatus();
+
+  // telas conectadas
+  if (state.screenCode) $('#screen-code').textContent = state.screenCode;
+  const sl = $('#screens-list');
+  if (sl) {
+    sl.innerHTML = '<li>Tela principal (esta)</li>' + (state.screens || []).map(s =>
+      `<li>Tela ${s.n}${IS_MIRROR ? '' : ` <button class="kick-screen" data-n="${s.n}" title="Desconectar">remover</button>`}</li>`).join('');
+    sl.querySelectorAll('.kick-screen').forEach(b =>
+      b.addEventListener('click', () => socket.emit('tv:kick-screen', { n: Number(b.dataset.n) })));
+  }
 
   // pausa
   $('#pause-overlay').classList.toggle('hidden', state.state !== 'paused');
@@ -383,7 +432,7 @@ function render(state) {
     // revelacao: quem inicia a proxima rodada e o proprio proximo jogador, no celular
     if (state.phase === 'reveal' && state.nextTurnPlayerId) {
       const nx = state.players.find(p => p.id === state.nextTurnPlayerId);
-      $('#next-wait').textContent = `Aguardando ${nx?.emoji || ''} ${nx?.name || '...'} iniciar a proxima rodada no celular...`;
+      $('#next-wait').textContent = `Aguardando ${nx?.name || '...'} iniciar a proxima rodada no celular...`;
     } else {
       $('#next-wait').textContent = '';
     }
@@ -417,11 +466,11 @@ function renderScoreboard(state) {
   let rows;
   if (isTeams) {
     rows = Object.entries(state.teams).map(([team, t]) => ({
-      id: team, label: `🏳 ${team}`, fichas: t.fichas, timeline: t.timeline, isTurn: state.turnEntityId === team
+      id: team, pet: null, label: `Equipe ${team}`, fichas: t.fichas, timeline: t.timeline, isTurn: state.turnEntityId === team
     }));
   } else {
     rows = state.players.map(p => ({
-      id: p.id, label: `${p.emoji} ${p.name}${p.connected ? '' : ' (offline)'}`,
+      id: p.id, pet: p.pet, label: `${p.name}${p.connected ? '' : ' (offline)'}`,
       fichas: p.fichas, timeline: p.timeline, isTurn: state.turnPlayerId === p.id
     }));
   }
@@ -441,9 +490,10 @@ function scoreCard(r, pos, movedUp) {
   div.className = 'score-card' + (r.isTurn ? ' turn' : '') + (pos === 1 ? ' leader' : '') + (movedUp ? ' rank-up' : '');
   div.dataset.pid = r.id;
   div.innerHTML = `<div class="score-head">
-      <span class="pos-badge num">${pos === 1 ? '👑' : pos + 'º'}</span>
+      <span class="pos-badge num">${pos}º</span>
+      ${petImg(r.pet)}
       <span class="score-name">${esc(r.label)}</span>
-      <span class="fichas num">🪙 ${r.fichas} · ${r.timeline.length} cartas</span></div>
+      <span class="fichas num"><span class="coin"></span> ${r.fichas} · ${r.timeline.length} cartas</span></div>
     <div class="mini-timeline">${r.timeline.map(c =>
       `<span class="mini-card" style="--dec:${decColor(c.year)}" title="${esc(c.title)} (${c.year})">${String(c.year).slice(2)}</span>`).join('')}</div>`;
   return div;
@@ -457,8 +507,7 @@ function coinFly(playerId, total = 1) {
   const rect = target.getBoundingClientRect();
   for (let i = 0; i < total; i++) {
     const coin = document.createElement('span');
-    coin.className = 'coin-fly';
-    coin.textContent = '🪙';
+    coin.className = 'coin coin-fly';
     coin.style.left = '50vw';
     coin.style.top = '50vh';
     coin.style.setProperty('--tx', `${rect.left + rect.width / 2 - innerWidth / 2}px`);
@@ -477,9 +526,9 @@ function showEnd(winner) {
   const isTeams = STATE.config.modo === 'EQUIPES' && STATE.teams;
   let ranking;
   if (isTeams) {
-    ranking = Object.entries(STATE.teams).map(([team, t]) => ({ label: `🏳 ${team}`, cartas: t.cartas, timeline: t.timeline }));
+    ranking = Object.entries(STATE.teams).map(([team, t]) => ({ label: `Equipe ${team}`, pet: null, cartas: t.cartas, timeline: t.timeline }));
   } else {
-    ranking = STATE.players.map(p => ({ label: `${p.emoji} ${p.name}`, cartas: p.cartas, timeline: p.timeline }));
+    ranking = STATE.players.map(p => ({ label: p.name, pet: p.pet, cartas: p.cartas, timeline: p.timeline }));
   }
   ranking.sort((a, b) => b.cartas - a.cartas);
 
@@ -490,14 +539,14 @@ function showEnd(winner) {
     const r = ranking[i];
     if (!r) return;
     podium.insertAdjacentHTML('beforeend',
-      `<div class="place p${i + 1}"><div class="pos">${i + 1}º</div><div>${esc(r.label)}</div><div class="num">${r.cartas} cartas</div></div>`);
+      `<div class="place p${i + 1}"><div class="pos">${i + 1}º</div>${petImg(r.pet, 'pet-img big')}<div>${esc(r.label)}</div><div class="num">${r.cartas} cartas</div></div>`);
   });
 
   const ft = $('#final-timelines');
   ft.innerHTML = '';
   ranking.forEach(r => {
     ft.insertAdjacentHTML('beforeend',
-      `<div class="final-row"><div class="who">${esc(r.label)}</div><div class="cards">${
+      `<div class="final-row"><div class="who">${petImg(r.pet)} ${esc(r.label)}</div><div class="cards">${
         r.timeline.map(c => `<div class="card45" style="--dec:${decColor(c.year)}">
           <div class="year">${c.year}</div><div class="song">${esc(c.title)}</div><div class="who">${esc(c.artist)}</div></div>`).join('')
       }</div></div>`);
@@ -508,8 +557,9 @@ let playbackGen = 0; // invalida loops/retentativas de reproducoes anteriores
 
 // ---------------- reproducao ----------------
 async function playCurrentTrack(isReplay = false, attempt = 0) {
-  const myGen = ++playbackGen;
-  stopAudio();
+  if (IS_MIRROR) return;   // o som e da tela principal; o vinil chega via screen:vinyl
+  stopAudio();                       // para o que estiver tocando (incrementa a geracao)
+  const myGen = ++playbackGen;       // captura a geracao DEPOIS do stop, senao aborta a si mesma
   try {
     // o servidor ja troca a faixa sozinho em caso de falha; aqui so retentamos
     // a chamada algumas vezes sem alarde, para o jogador nunca ver erro
@@ -530,8 +580,8 @@ async function playCurrentTrack(isReplay = false, attempt = 0) {
       // repete o trecho em loop ate completar o tempo pedido
       const a = $('#audio-preview');
       a.src = info.url;
-      a.onended = () => { if (myGen === playbackGen) a.play().catch(() => {}); };
-      await a.play().catch(() => toast('Clique na tela da TV para liberar o audio.'));
+      a.onended = () => { if (myGen === playbackGen) a.play()?.catch(() => {}); };
+      await a.play()?.catch(() => toast('Clique na tela da TV para liberar o audio.'));
     } else if (info.type === 'youtube') {
       await ensureYouTube();
       if (myGen !== playbackGen) return;
@@ -566,6 +616,7 @@ function stopAudio() {
 function showVinyl(on) {
   $('#overlay-vinyl').classList.toggle('hidden', !on);
   if (on) $('#progress-bar').style.width = '0%';
+  if (!IS_MIRROR) socket.emit('tv:vinyl', { on });   // espelhos seguem a principal
 }
 
 function startProgress(durMs) {
@@ -671,4 +722,4 @@ function toast(msg) {
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 // audio da TV precisa de um gesto do usuario em alguns navegadores
-document.addEventListener('click', () => { $('#audio-preview').play().catch(() => {}); $('#audio-preview').pause(); }, { once: true });
+document.addEventListener('click', () => { $("#audio-preview").play()?.catch(() => {}); $('#audio-preview').pause(); }, { once: true });

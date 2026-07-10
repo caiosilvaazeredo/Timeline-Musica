@@ -42,6 +42,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 
 app.get('/play', (req, res) => res.sendFile(path.join(__dirname, 'public', 'player.html')));
 app.get('/tv', (req, res) => res.sendFile(path.join(__dirname, 'public', 'tv.html')));
+app.get('/tutorial', (req, res) => res.sendFile(path.join(__dirname, 'public', 'tutorial.html')));
 
 // Atalho estilo Kahoot: digitar site.com/AB123 entra direto na sala
 app.get('/:code([A-Za-z0-9]{4,6})', (req, res) => {
@@ -270,7 +271,7 @@ function quickPreset(id) {
     fonte: 'PREVIEW',
     duracaoTrechoSeg: 30,
     maxContestacoes: 3,
-    filtros: { origem: p.origem, billboardUS: Boolean(p.top100), billboardBR: Boolean(p.top100), decadaMin: 1950, decadaMax: 2020 }
+    filtros: { origem: p.origem, billboardUS: Boolean(p.top100), billboardBR: Boolean(p.top100), decadaMin: 1930, decadaMax: 2020 }
   };
 }
 
@@ -299,8 +300,14 @@ function beginRound(room) {
 }
 
 function openContestWindow(room) {
+  restartContestTimer(room);
   io.to(room.code).emit('contest:open', { seconds: engine.CONTEST_WINDOW_MS / 1000 });
   broadcast(room);
+}
+
+// cronometro da contestacao reinicia a cada novo contestador e a cada posicionamento
+function restartContestTimer(room) {
+  clearTimeout(room.timers.contest);
   room.timers.contest = setTimeout(() => closeContestAndGuess(room), engine.CONTEST_WINDOW_MS);
 }
 
@@ -502,7 +509,8 @@ io.on('connection', (socket) => {
     const r = engine.placeTurnCard(room, socket.data.playerId, slot);
     if (r.error) return cb?.(r);
     if (room.timers.placing) { clearTimeout(room.timers.placing); delete room.timers.placing; }
-    io.to(room.code).emit('turn:placed', { playerId: socket.data.playerId });
+    const itv = engine.slotInterval(room, room.round.turnEntityId, room.round.turnPlacement);
+    io.to(room.code).emit('turn:placed', { playerId: socket.data.playerId, interval: itv });
     openContestWindow(room);
     cb?.({ ok: true });
   });
@@ -517,11 +525,13 @@ io.on('connection', (socket) => {
       order: r.order,
       tie: room.round.contests.some(c => c.tieBroken)
     });
+    // avisa quem e o contestador da vez (fila sequencial) e reinicia o cronometro
+    const active = engine.activeContester(room);
+    if (active) io.to(room.code).emit('contest:turn', { playerId: active.playerId });
+    restartContestTimer(room);
+    io.to(room.code).emit('contest:open', { seconds: engine.CONTEST_WINDOW_MS / 1000, restart: true });
     broadcast(room);
     cb?.({ ok: true });
-    // se todos os demais ja se resolveram, nao espera o cronometro:
-    // os contestadores ainda posicionam durante a fase de palpites
-    if (engine.allNonTurnResolved(room)) closeContestAndGuess(room);
   });
 
   socket.on('player:pass-contest', (cb) => {
@@ -538,9 +548,23 @@ io.on('connection', (socket) => {
     if (!room) return;
     const r = engine.placeContestCard(room, socket.data.playerId, slot);
     if (r.error) return cb?.(r);
+    const who = room.players.find(p => p.id === socket.data.playerId);
+    // a escolha do contestador aparece para todos, 1 a 1, na ordem
+    io.to(room.code).emit('contest:placed', {
+      playerId: socket.data.playerId, name: who?.name || '', pet: who?.pet || '', interval: r.interval
+    });
     broadcast(room);
-    if (r.allPlaced && room.round.phase === 'contest') closeContestAndGuess(room);
     cb?.({ ok: true });
+    if (room.round.phase !== 'contest') {
+      if (r.allPlaced && engine.allEligibleGuessed(room) && room.round.phase === 'guessing') doReveal(room);
+      return;
+    }
+    if (r.allPlaced && engine.allNonTurnResolved(room)) return closeContestAndGuess(room);
+    // reabre a janela com cronometro cheio: o proximo ve a escolha anterior e decide
+    const active = engine.activeContester(room);
+    if (active) io.to(room.code).emit('contest:turn', { playerId: active.playerId });
+    restartContestTimer(room);
+    io.to(room.code).emit('contest:open', { seconds: engine.CONTEST_WINDOW_MS / 1000, restart: true });
   });
 
   socket.on('player:guess', (guess, cb) => {
@@ -608,6 +632,29 @@ io.on('connection', (socket) => {
     if (room?.round && room.round.turnPlayerId === socket.data.playerId && room.round.phase !== 'reveal') {
       io.to(room.tvSocketId).emit('playback:replay');
     }
+  });
+
+  // qualquer jogador propoe corrigir os dados de uma musica que apareceu na partida
+  socket.on('song:propose-fix', ({ songId, fields }, cb) => {
+    const room = engine.getRoom(socket.data.roomCode);
+    if (!room) return;
+    const r = engine.proposeFix(room, socket.data.playerId, songId, fields || {});
+    if (r.error) return cb?.(r);
+    io.to(room.code).emit('fix:proposal', engine.publicState(room).pendingFix);
+    broadcast(room);
+    cb?.({ ok: true });
+  });
+
+  socket.on('song:vote-fix', ({ approve }, cb) => {
+    const room = engine.getRoom(socket.data.roomCode);
+    if (!room) return;
+    const r = engine.voteFix(room, socket.data.playerId, Boolean(approve));
+    if (r.error) return cb?.(r);
+    if (r.rejected) io.to(room.code).emit('fix:rejected');
+    else if (r.applied) io.to(room.code).emit('fix:applied', r.applied);
+    else io.to(room.code).emit('fix:update', { approvals: r.approvals, needed: r.needed });
+    broadcast(room);
+    cb?.({ ok: true });
   });
 
   socket.on('player:reaction', ({ text }) => {

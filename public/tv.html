@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vitrola, TV</title>
-<link rel="stylesheet" href="/base.css?v=6afb4e41">
-<link rel="stylesheet" href="/tv.css?v=6afb4e41">
+<link rel="stylesheet" href="/base.css?v=b36c7532">
+<link rel="stylesheet" href="/tv.css?v=b36c7532">
 </head>
 <body>
 
@@ -58,6 +58,7 @@
       <button id="mc-vis-private" class="vis-btn sel" data-vis="private">🔒 Privada, so quem tiver o codigo</button>
       <button id="mc-vis-public" class="vis-btn" data-vis="public">🌍 Publica, aparece no menu inicial</button>
     </div>
+    <p class="mc-tutorial"><a href="/tutorial" target="_blank" rel="noopener">Como jogar (tutorial completo)</a></p>
   </div>
 </section>
 
@@ -211,7 +212,6 @@
     <aside class="scoreboard" id="scoreboard"></aside>
   </div>
 
-  <div id="chat-ticker" class="chat-ticker" aria-live="polite"></div>
 </section>
 
 <!-- ============ FIM ============ -->
@@ -219,6 +219,11 @@
   <h1 class="end-title">Fim de jogo</h1>
   <div id="podium" class="podium"></div>
   <div id="final-timelines" class="final-timelines"></div>
+  <div class="played-wrap">
+    <h2>Musicas desta partida</h2>
+    <p class="hint">Achou algum dado errado? Proponha a correcao pelo celular: vale se todos os jogadores aprovarem.</p>
+    <div id="played-songs" class="played-songs"></div>
+  </div>
   <div class="end-actions">
     <button id="btn-rematch" class="btn-gold">Revanche na mesma sala</button>
     <button id="btn-close" class="btn-ghost">Encerrar sala</button>
@@ -238,13 +243,15 @@
   <button id="btn-resume" class="btn-gold">Retomar</button>
 </div>
 
+<div id="chat-ticker" class="chat-ticker" aria-live="polite"></div>
+<div id="fix-banner" class="fix-banner hidden" aria-live="polite"></div>
 <div id="reactions-layer" aria-hidden="true"></div>
 <audio id="audio-preview"></audio>
 <div id="yt-holder" class="yt-holder"><div id="yt-player"></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
-<script src="/fx.js?v=6afb4e41"></script>
-<script src="/tv.js?v=6afb4e41"></script>
+<script src="/fx.js?v=b36c7532"></script>
+<script src="/tv.js?v=b36c7532"></script>
 </body>
 </html>

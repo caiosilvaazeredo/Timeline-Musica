@@ -30,6 +30,84 @@ on('#btn-as-screen', 'click', () => {
   }
 });
 
+// ---------------- chat da sala (lobby) ----------------
+on('#lobby-chat-form', 'submit', (e) => {
+  e.preventDefault();
+  const inp = $('#lobby-chat-input');
+  const text = inp.value.trim();
+  if (!text) return;
+  socket.emit('player:chat', { text });
+  inp.value = '';
+});
+
+socket.on('chat', ({ name, pet, text }) => {
+  const log = $('#lobby-chat-log');
+  if (!log) return;
+  log.insertAdjacentHTML('beforeend', `<div class="msg">${petMini(pet)} <b>${esc(name)}:</b> ${esc(text)}</div>`);
+  while (log.children.length > 40) log.firstChild.remove();
+  log.scrollTop = log.scrollHeight;
+});
+
+// ---------------- correcao de dados (unanimidade) ----------------
+function openFixForm(song) {
+  if (!song) return;
+  $('#fix-form').dataset.songId = song.id;
+  $('#fx-title').value = song.title || '';
+  $('#fx-artist').value = song.artist || '';
+  $('#fx-composer').value = song.composer || '';
+  $('#fx-year').value = song.year || '';
+  show('#fix-form', true);
+  show('#fix-vote', false);
+}
+
+on('#btn-fix-data', 'click', () => openFixForm(lastRevealSong));
+on('#btn-fx-cancel', 'click', () => show('#fix-form', false));
+
+on('#btn-fx-send', 'click', () => {
+  const songId = $('#fix-form').dataset.songId;
+  socket.emit('song:propose-fix', {
+    songId,
+    fields: {
+      title: $('#fx-title').value,
+      artist: $('#fx-artist').value,
+      composer: $('#fx-composer').value,
+      year: $('#fx-year').value
+    }
+  }, (res) => {
+    if (res?.error) return status(res.error, 'hot');
+    show('#fix-form', false);
+    status('Proposta enviada! Vale se TODOS aprovarem.', 'ok');
+  });
+});
+
+socket.on('fix:proposal', (fix) => renderFixVote(fix));
+socket.on('fix:update', () => {});
+socket.on('fix:applied', () => {
+  show('#fix-vote', false); show('#fix-form', false);
+  FX.confetti(30);
+  status('Correcao aprovada por todos e salva!', 'ok');
+});
+socket.on('fix:rejected', () => {
+  show('#fix-vote', false);
+  status('Proposta de correcao recusada.', '');
+});
+
+function renderFixVote(fix) {
+  if (!fix) { show('#fix-vote', false); return; }
+  if (fix.proposedBy === ME.playerId || fix.approvals.includes(ME.playerId)) {
+    show('#fix-vote', false);
+    if (fix.proposedBy === ME.playerId) status(`Proposta em votacao: ${fix.approvals.length}/${fix.needed} aprovaram.`, '');
+    return;
+  }
+  const changes = Object.entries(fix.fields)
+    .map(([k, v]) => `${k === 'year' ? 'ano' : k}: ${fix.before[k]} -> ${v}`).join(' | ');
+  $('#fix-vote-text').textContent = `${fix.proposerName} propos corrigir "${fix.before.title}" (${changes}). Aprova?`;
+  show('#fix-vote', true);
+}
+
+on('#btn-fx-yes', 'click', () => { socket.emit('song:vote-fix', { approve: true }); show('#fix-vote', false); status('Voto registrado. Aguardando os demais...', ''); });
+on('#btn-fx-no', 'click', () => { socket.emit('song:vote-fix', { approve: false }); show('#fix-vote', false); });
+
 // ---------------- troca de sala / salas publicas (tela de entrada) ----------------
 on('#switch-form', 'submit', (e) => {
   e.preventDefault();
@@ -98,6 +176,7 @@ function join(name, pet, token) {
     sessionStorage.setItem(`vitrola_${CODE}`, JSON.stringify({ token: res.token, name, pet }));
     ['#me-pet', '#g-pet'].forEach(s => { const el = $(s); if (el) el.src = `/pets/${pet}.png`; });
     ['#me-name', '#g-name'].forEach(s => $(s).textContent = name);
+    FX.keepAwake();
     render(res.state);
   });
 }
@@ -143,6 +222,16 @@ function myEntityId() {
 }
 function myTimeline() { return me()?.timeline || []; }
 
+function fmtInterval(itv) {
+  if (!itv) return '';
+  if (itv.left === null && itv.right === null) return 'na linha vazia';
+  if (itv.left === null) return `antes de ${itv.right}`;
+  if (itv.right === null) return `depois de ${itv.left}`;
+  return `entre ${itv.left} e ${itv.right}`;
+}
+const petMini = (pet) => pet ? `<img class="pet-avatar" src="/pets/${esc(pet)}.png" alt="">` : '';
+let lastRevealSong = null;   // para o botao "corrigir dados desta musica" 
+
 function render(state) {
   if (!state || !ME) return;
   STATE = state;
@@ -176,7 +265,24 @@ function render(state) {
     syncPhase(state);
   }
 
+  // proposta de correcao pendente sobrevive a reconexoes e vale tambem no fim de jogo
+  if (state.pendingFix) renderFixVote(state.pendingFix);
+  else show('#fix-vote', false);
+
   if (state.state === 'ended') {
+    const es = $('#end-songs');
+    if (es) {
+      es.innerHTML = (state.playedSongs || []).map(s => `
+        <div class="end-song" style="--dec:${decColor(s.year)}">
+          <span><span class="es-y">${s.year}</span> <b>${esc(s.title)}</b></span>
+          <button class="btn-ghost es-fix" data-id="${esc(s.id)}">Corrigir</button>
+          <span class="es-i">${esc(s.artist)}${s.composer && s.composer !== s.artist ? ` | Autor: ${esc(s.composer)}` : ''}</span>
+        </div>`).join('');
+      es.querySelectorAll('.es-fix').forEach(b => b.addEventListener('click', () => {
+        const song = (STATE?.playedSongs || []).find(x => x.id === b.dataset.id);
+        openFixForm(song);
+      }));
+    }
     const winners = state.config.modo === 'EQUIPES'
       ? state.winner === p.team
       : state.winner === p.id;
@@ -201,8 +307,7 @@ function syncPhase(state) {
     !isMyTurn &&
     myEntityId() !== state.turnEntityId &&
     !alreadyContested &&
-    (me()?.fichas ?? 0) > 0 &&
-    state.contests.length < state.config.maxContestacoes;
+    (me()?.fichas ?? 0) > 0;   // sem teto: contesta enquanto houver elegiveis
   const wasDisabled = contestBtn.disabled;
   contestBtn.disabled = !canContest;
   if (wasDisabled && canContest) { FX.vibrate(35); FX.zoom(contestBtn); }
@@ -251,6 +356,29 @@ function syncPhase(state) {
   if (state.phase === 'guessing') openGuesser(state);
   if (state.phase === 'reveal' && state.reveal) showReveal(state.reveal);
   if (!state.phase) { hideAll(); status('Preparando a proxima rodada...', ''); }
+
+  renderTurnPreview(state, isMyTurn);
+
+  // reconexao no meio da fila: se sou o contestador ativo, reabre o placer
+  if (state.phase === 'contest' && state.activeContesterId === ME.playerId && iContested && !iPlacedContest && placingAs !== 'contest') {
+    openPlacer('contest', 'Sua vez de contestar! Posicione na SUA linha do tempo.');
+  }
+}
+
+// todos acompanham do celular a linha do tempo de quem esta jogando
+function renderTurnPreview(state, isMyTurn) {
+  const on = !isMyTurn && (state.phase === 'placing' || state.phase === 'contest') && state.turnPlayerId;
+  show('#turn-preview', Boolean(on));
+  if (!on) return;
+  const t = state.players.find(x => x.id === state.turnPlayerId);
+  if (!t) return;
+  $('#turn-preview-label').textContent = `Linha do tempo de ${t.name} (a carta misteriosa entra ai)`;
+  const cards = t.timeline.map(c =>
+    `<div class="tl-card" style="--dec:${decColor(c.year)}"><span class="num">${c.year}</span><small>${esc(c.title)}</small></div>`);
+  if (state.phase === 'contest' && state.turnPlacementSlot !== null && state.turnPlacementSlot !== undefined) {
+    cards.splice(state.turnPlacementSlot, 0, '<div class="mystery-mini">?</div>');
+  }
+  $('#turn-preview-line').innerHTML = cards.join('');
 }
 
 // ---------------- rodadas ----------------
@@ -263,6 +391,9 @@ socket.on('round:start', () => {
   show('#btn-pass-contest', false);
   $('#ig-artist').value = ''; $('#ig-title').value = ''; $('#ig-year').value = '';
   $('#inline-guess').classList.remove('skipped');
+  $('#contest-log').innerHTML = ''; show('#contest-log', false);
+  show('#turn-preview', false);
+  show('#btn-fix-data', false); show('#fix-form', false); show('#fix-vote', false);
   clearTimeout(window._hurryTimer);
   // limpa o que sobrou do palpite da musica anterior
   $('#guess-artist').value = ''; $('#guess-title').value = ''; $('#guess-year').value = '';
@@ -271,8 +402,27 @@ socket.on('round:start', () => {
 socket.on('contest:new', ({ playerId }) => {
   if (playerId === ME.playerId) {
     iContested = true;
-    openPlacer('contest', 'Voce contestou! Agora e obrigado a posicionar na SUA linha do tempo.');
+    status('Contestacao registrada! Aguarde sua vez na fila...', 'hot');
   }
+});
+
+// e a vez deste contestador posicionar (1 a 1, na ordem do aperto)
+socket.on('contest:turn', ({ playerId }) => {
+  if (playerId === ME.playerId && !iPlacedContest) {
+    FX.vibrate([70, 60, 70]);
+    openPlacer('contest', 'Sua vez de contestar! Posicione na SUA linha do tempo. O cronometro reiniciou para voce.');
+  } else if (iContested && !iPlacedContest) {
+    const q = STATE?.players.find(x => x.id === playerId);
+    status(`${q?.name || 'Alguem'} esta posicionando. Voce e o proximo da fila!`, 'hot');
+  }
+});
+
+// escolha de cada contestador visivel para todos (para o proximo escolher diferente)
+socket.on('contest:placed', ({ playerId, name, pet, interval }) => {
+  const log = $('#contest-log');
+  show('#contest-log', true);
+  log.insertAdjacentHTML('beforeend',
+    `<div class="cl">${petMini(pet)} <span><b>${esc(name)}</b> apostou ${esc(fmtInterval(interval))}</span></div>`);
 });
 
 socket.on('guess:open', () => { if (STATE) openGuesser(STATE); });
@@ -390,7 +540,8 @@ function openGuesser(state) {
   }
   const mustGuess = (modo === 'PRO' || modo === 'EXPERT') && (isMyTurn || iContested);
   show('#guesser', true);
-  show('#placer', false);
+  // BUG corrigido: se contestei e ainda nao posicionei, o placer PERMANECE aberto
+  if (!(placingAs === 'contest' && !iPlacedContest)) show('#placer', false);
   $('#guess-year').classList.toggle('hidden', modo !== 'EXPERT');
   $('#guess-label').textContent = mustGuess
     ? `Modo ${modo}: acerte artista e musica${modo === 'EXPERT' ? ' e o ano exato' : ''} para valer a carta. Nao precisa escrever perfeito.`
@@ -466,6 +617,8 @@ function showReveal(results) {
   } else {
     petMood(null);
   }
+  lastRevealSong = s;
+  show('#btn-fix-data', true);
   const box = $('#p-reveal');
   box.classList.remove('flip-in'); void box.offsetWidth; box.classList.add('flip-in');
   box.style.setProperty('--dec', decColor(s.year));

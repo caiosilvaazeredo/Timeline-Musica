@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vitrola | Como jogar</title>
+<link rel="stylesheet" href="/base.css?v=b36c7532">
+<style>
+  body { overflow-y: auto; }
+  .tut { max-width: 860px; margin: 0 auto; padding: 30px 20px 80px; }
+  .tut h1 { font-family: var(--font-display); color: var(--gold); font-size: 2.2rem; margin-bottom: 4px; }
+  .tut .sub { color: var(--cream-dim); margin-bottom: 26px; }
+  .tut h2 { font-family: var(--font-display); color: var(--gold); margin: 30px 0 10px; font-size: 1.4rem; }
+  .tut p, .tut li { line-height: 1.65; color: var(--cream); }
+  .tut ol, .tut ul { padding-left: 22px; display: grid; gap: 8px; margin: 10px 0; }
+  .tut b { color: var(--gold); }
+  .box { background: var(--ink-2); border-left: 5px solid var(--gold); border-radius: 12px; padding: 14px 18px; margin: 14px 0; }
+  .box.hot { border-color: var(--hot); }
+  .back { display: inline-block; margin-bottom: 20px; color: var(--gold); font-weight: 700; text-decoration: none; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid rgba(244,232,207,.14); }
+  th { color: var(--gold); }
+</style>
+</head>
+<body>
+<div class="tut">
+  <a class="back" href="/">&larr; Voltar</a>
+  <h1>Como jogar Vitrola</h1>
+  <p class="sub">Um jogo de festa musical: ouca o trecho, adivinhe a epoca e monte sua linha do tempo.</p>
+
+  <h2>1. Preparacao</h2>
+  <ol>
+    <li>Alguem abre o jogo numa <b>TV ou telao</b> e escolhe um dos modos prontos (Festa Rapida, Festa Brasileira, Festa Internacional, PRO, Expert, Equipes) ou a Sala Personalizada.</li>
+    <li>Os jogadores apontam a camera do celular para o <b>QR code</b> da TV (ou digitam o codigo da sala no site). Cada um escolhe um nome e um <b>pet</b> como avatar.</li>
+    <li>Quer mais telas mostrando a partida? Cada sala tem um <b>codigo de tela</b> separado: qualquer outra TV pode espelhar tudo em tempo real (o som toca so na principal).</li>
+    <li>Cada jogador comeca com <b>1 carta gratis</b> na linha do tempo e <b>3 fichas</b> (5 no modo PRO).</li>
+  </ol>
+
+  <h2>2. A rodada</h2>
+  <ol>
+    <li>A TV toca um <b>trecho de 30 segundos</b> de uma musica misteriosa (so o audio, sem nome, sem ano).</li>
+    <li>O <b>jogador da vez</b> escolhe no celular <b>onde a musica entra</b> na propria linha do tempo (antes, entre ou depois das cartas que ja tem), pela ordem do ano de lancamento.</li>
+    <li>Na mesma tela, ele pode arriscar o <b>artista/autor e o nome da musica</b> (e o ano exato no Expert), ou tocar em "Nao sei". Musica certa vale <b>+1 ficha</b>; artista certo vale <b>+1 ficha</b>.</li>
+    <li>Ao confirmar a jogada, a <b>musica e cortada na hora</b> e a TV mostra o intervalo escolhido (ex.: "entre 1985 e 1992"). Se ele tiver arriscado o palpite, a resposta dele tambem aparece na TV.</li>
+  </ol>
+  <div class="box">
+    <b>Sem pressa:</b> nao ha cronometro por padrao. So depois que a musica termina, qualquer outro jogador pode acionar um cronometro de 30 segundos ("Apressar"). Ou seja, o jogador da vez sempre tem no minimo a musica inteira + 30s para pensar.
+  </div>
+
+  <h2>3. Contestacao (estilo Among Us)</h2>
+  <p>Achou que o jogador da vez errou a posicao? <b>Conteste!</b> Custa 1 ficha e funciona assim:</p>
+  <ol>
+    <li>Depois da jogada, abre uma janela de <b>30 segundos</b> com um botao grande de <b>CONTESTAR</b> no celular de todo mundo.</li>
+    <li>As contestacoes sao <b>ilimitadas</b> (enquanto houver jogadores com fichas que ainda nao contestaram) e acontecem <b>uma de cada vez, na ordem do aperto</b>.</li>
+    <li>O contestador da vez posiciona a carta na <b>propria</b> linha do tempo. A escolha dele (o intervalo de anos) aparece na TV e nos celulares: o proximo contestador ve tudo e pode escolher diferente.</li>
+    <li>A cada novo contestador e a cada posicionamento, o <b>cronometro reinicia</b> do zero.</li>
+    <li>Quem nao quiser disputar pode tocar em <b>"Nao vou contestar"</b>: quando todos se resolvem, a janela fecha na hora, sem esperar o tempo.</li>
+  </ol>
+  <div class="box hot">
+    <b>Quem ganha a carta?</b> Na revelacao, o ano verdadeiro aparece. Se a posicao do jogador da vez estava certa, a carta e dele. Se estava errada e um contestador acertou na propria linha, a carta vai para o contestador (o primeiro que acertou, na ordem). Contestou e errou tambem? A carta e descartada e a ficha nao volta.
+  </div>
+
+  <h2>4. Palpites de artista e musica</h2>
+  <p>Alem do jogador da vez, <b>somente quem contestou</b> pode responder artista e musica na janela de palpites. Nao precisa escrever perfeito: o jogo entende erros de digitacao e nomes parciais. Cada acerto vale +1 ficha.</p>
+
+  <h2>5. Modos de jogo</h2>
+  <table>
+    <tr><th>Modo</th><th>Regra</th></tr>
+    <tr><td>Original</td><td>Acertou a posicao, a carta e sua. Palpites valem fichas extras.</td></tr>
+    <tr><td>PRO</td><td>So mantem a carta quem acerta a posicao <b>e</b> artista <b>e</b> musica. Comeca com 5 fichas.</td></tr>
+    <tr><td>Expert</td><td>PRO + ano exato de lancamento.</td></tr>
+    <tr><td>Equipes</td><td>Linha do tempo e fichas compartilhadas; os membros se revezam jogando.</td></tr>
+  </table>
+
+  <h2>6. Fichas</h2>
+  <ul>
+    <li><b>Ganhe</b> fichas acertando musica (+1) e artista/autor (+1) nos palpites.</li>
+    <li><b>Gaste</b> 1 ficha para contestar ou para trocar uma carta que nao quer (quando disponivel).</li>
+  </ul>
+
+  <h2>7. Vitoria</h2>
+  <p>Vence quem completar primeiro a <b>meta de cartas</b> na linha do tempo (8 por padrao, ajustavel na sala personalizada). No fim, a TV mostra o podio e <b>todas as musicas da partida</b>.</p>
+
+  <h2>8. Dados errados? Corrijam juntos</h2>
+  <p>Achou que o ano, o titulo ou o artista de uma musica esta errado? Durante a partida (na revelacao) ou no fim de jogo, toque em <b>"Corrigir dados"</b> no celular, proponha os valores certos e mande para votacao. Se <b>todos os jogadores da sala aprovarem</b>, a correcao e aplicada e fica salva para as proximas partidas de todo mundo.</p>
+
+  <h2>9. Dicas praticas</h2>
+  <ul>
+    <li>Use o botao <b>Tela cheia</b> na barra inferior: alem de imersivo, mantem a tela do celular acesa durante a partida.</li>
+    <li>A barra <b>A- / A+</b> ajusta o tamanho de tudo, otimo para TVs vistas de longe.</li>
+    <li>Nenhuma musica repete enquanto a sala existir, nem em revanches.</li>
+    <li>Caiu a conexao? Volte pelo mesmo link: sua vaga, cartas e fichas continuam la. A sua vez nunca e pulada.</li>
+  </ul>
+
+  <a class="back" href="/">&larr; Voltar ao inicio</a>
+</div>
+<script src="/fx.js?v=b36c7532"></script>
+</body>
+</html>

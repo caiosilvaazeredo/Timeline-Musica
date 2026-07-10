@@ -35,14 +35,17 @@ Os avatares sao 24 pets (pack Cube Pets do Kenney, CC0, kenney.nl) escolhidos na
 3. Os jogadores escaneiam o QR code com o celular, escolhem nome e avatar e entram no lobby.
 4. Ao iniciar, cada jogador recebe uma carta inicial. A cada rodada a TV fica preta com o vinil dourado girando enquanto o trecho toca.
 5. O jogador da vez posiciona a carta na propria linha do tempo pelo celular, sem cronometro por padrao: apos 15 segundos, qualquer outro jogador pode acionar um cronometro de 30s (minimo garantido de 45s para pensar). Se ele arriscar artista e musica, a musica e cortada na hora e o palpite dele aparece na TV para todos. Cada trecho toca por 30 segundos por padrao (configuravel ate 90s; previews de 30s do Deezer repetem em loop se voce aumentar a duracao).
-6. Depois que ele joga, o botao CONTESTAR libera para os demais por 30 segundos.
-7. Quem contesta gasta 1 ficha e e obrigado a posicionar a carta na propria linha. Ate N jogadores podem contestar a mesma carta (configuravel). Cliques simultaneos (janela de 400ms) vao a sorteio, e a ordem define quem tem prioridade sobre a carta.
-8. Durante a rodada a TV exibe a linha do tempo do jogador da vez, e a carta misteriosa pulsa no intervalo que ele escolheu assim que posiciona: toda a sala acompanha a jogada.
-9. Na revelacao a TV mostra ano, musica, interprete mais conhecido e autor original. Acertar a musica rende +1 ficha e acertar o artista/autor rende +1 ficha (ate 2 por rodada). A comparacao e tolerante a erros de escrita: "bohemian rapsody", "quen" ou so "jobim" contam como acerto.
-10. Apos a revelacao, quem inicia a proxima rodada e o proprio proximo jogador, pelo celular; a TV exibe "Aguardando X iniciar a proxima rodada" (o host mantem um botao de forcar, se precisar).
-11. O revezamento de turnos segue a ordem fixa de entrada na sala: contestar ou vencer cartas nunca muda de quem e a proxima vez. Se uma faixa falhar na reproducao, o servidor troca por outra do baralho silenciosamente.
-12. Nenhuma musica repete enquanto a sala existir: o historico de faixas ja tocadas persiste entre rodadas e revanches (so e limpo automaticamente se os filtros forem tao restritos que o repertorio se esgote no meio da sessao).
-13. Vence quem atingir a meta de cartas (padrao 10).
+6. Ao confirmar a jogada, a musica e interrompida na hora e a TV mostra o intervalo escolhido. Depois, o botao CONTESTAR libera para os demais por 30 segundos.
+7. As contestacoes sao ilimitadas e sequenciais, estilo Among Us: uma de cada vez, na ordem estrita do aperto. A escolha de cada contestador (o intervalo de anos) aparece na TV e nos celulares, o cronometro reinicia a cada contestador e a cada posicionamento, e quem nao quiser disputar toca em "Nao vou contestar" (a janela fecha na hora quando todos se resolvem).
+8. Quem contesta gasta 1 ficha e e obrigado a posicionar a carta na propria linha. Ate N jogadores podem contestar a mesma carta (configuravel). Cliques simultaneos (janela de 400ms) vao a sorteio, e a ordem define quem tem prioridade sobre a carta.
+9. Durante a rodada a TV exibe a linha do tempo do jogador da vez, e a carta misteriosa pulsa no intervalo que ele escolheu assim que posiciona: toda a sala acompanha a jogada.
+10. Na revelacao a TV mostra ano, musica, interprete mais conhecido e autor original. Acertar a musica rende +1 ficha e acertar o artista/autor rende +1 ficha (ate 2 por rodada). A comparacao e tolerante a erros de escrita: "bohemian rapsody", "quen" ou so "jobim" contam como acerto.
+11. Apos a revelacao, quem inicia a proxima rodada e o proprio proximo jogador, pelo celular; a TV exibe "Aguardando X iniciar a proxima rodada" (o host mantem um botao de forcar, se precisar).
+12. O revezamento de turnos segue a ordem fixa de entrada na sala: contestar ou vencer cartas nunca muda de quem e a proxima vez. Se uma faixa falhar na reproducao, o servidor troca por outra do baralho silenciosamente.
+13. Nenhuma musica repete enquanto a sala existir: o historico de faixas ja tocadas persiste entre rodadas e revanches (so e limpo automaticamente se os filtros forem tao restritos que o repertorio se esgote no meio da sessao).
+14. Vence quem atingir a meta de cartas (padrao 8). No fim, a TV lista todas as musicas da partida.
+15. Dados errados de uma musica (ano, titulo, interprete, autor) podem ser corrigidos pelos proprios jogadores: qualquer um propoe pelo celular (na revelacao ou no fim de jogo) e, se TODOS os conectados aprovarem, a correcao e aplicada e persiste em data/overrides.json para as proximas partidas. O ano usado e sempre o de lancamento original, nunca de relancamentos.
+16. Tutorial completo em /tutorial, com link no menu da TV e no lobby do celular. O botao "Tela cheia" da barra inferior tambem mantem a tela do celular acesa (wake lock).
 
 ## Modos
 

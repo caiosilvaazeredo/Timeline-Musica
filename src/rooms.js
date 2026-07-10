@@ -4,7 +4,6 @@ const { buildDeck } = require('./songs');
 const { matchArtist, matchTitle } = require('./match');
 
 const MAX_PLAYERS = 8;
-const CONTEST_TIE_WINDOW_MS = 400;   // contestacoes dentro desta janela empatam e vao a sorteio
 const HURRY_AFTER_MS = 15000;        // apos 15s outro jogador pode acionar o cronometro
 const HURRY_COUNTDOWN_MS = 30000;    // cronometro de apressar: 30s (minimo garantido: 45s)
 const CONTEST_WINDOW_MS = 30000;   // conta apenas depois da jogada do jogador da vez
@@ -32,7 +31,7 @@ const DEFAULT_CONFIG = {
     origem: 'AMBAS',           // BR | INTL | AMBAS
     billboardUS: false,
     billboardBR: false,
-    decadaMin: 1950,
+    decadaMin: 1930,
     decadaMax: 2020
   }
 };
@@ -56,7 +55,9 @@ function createRoom(tvSocketId) {
     log: [],
     playedIds: new Set(),  // historico da sessao: nenhuma musica repete enquanto a sala existir
     screenCode: code4(),   // codigo separado para conectar telas extras (espelhos)
-    screens: []            // {socketId, n} telas espelho conectadas
+    screens: [],           // {socketId, n} telas espelho conectadas
+    playedSongs: [],       // todas as musicas que apareceram na partida (para revisao/correcao)
+    pendingFix: null       // proposta de correcao de dados aguardando unanimidade
   };
   rooms.set(room.code, room);
   screenCodes.set(room.screenCode, room.code);
@@ -168,7 +169,10 @@ function startGame(room) {
 // enquanto a sala existir (mesmo apos revanches)
 function drawCard(room) {
   const card = room.deck.pop();
-  if (card) room.playedIds.add(card.id);
+  if (card) {
+    room.playedIds.add(card.id);
+    room.playedSongs.push(card);
+  }
   return card;
 }
 
@@ -261,9 +265,6 @@ function requestContest(room, playerId) {
   if (r.contests.some(c => c.entityId === entityId)) return { error: 'Sua equipe ja contestou esta carta.' };
   if (fichasOf(room, playerId) <= 0) return { error: 'Voce nao tem fichas para contestar.' };
 
-  // limite de contestacoes simultaneas: menor entre a config e os intervalos livres da linha do tempo do contestador com menos cartas
-  if (r.contests.length >= room.config.maxContestacoes) return { error: 'Limite de contestacoes desta carta atingido.' };
-
   spendFicha(room, playerId, -1); // quem clicou e obrigado a jogar: a ficha ja foi gasta
   r.contests.push({ playerId, entityId, ts: Date.now(), slot: null, tieBroken: false });
   resolveContestOrder(r);
@@ -271,26 +272,25 @@ function requestContest(room, playerId) {
 }
 
 // Desempate: contestacoes dentro da janela de 400ms sao embaralhadas por sorteio
+// Fila estilo Among Us: ordem ESTRITA de aperto do botao (chegada no servidor).
+// O sorteio de empates do modelo antigo saiu: agora a disputa e sequencial e
+// ver a escolha dos anteriores faz parte do jogo, entao a ordem precisa ser fiel.
 function resolveContestOrder(r) {
-  const list = [...r.contests].sort((a, b) => a.ts - b.ts);
-  const groups = [];
-  for (const c of list) {
-    const g = groups[groups.length - 1];
-    if (g && c.ts - g[0].ts <= CONTEST_TIE_WINDOW_MS) g.push(c);
-    else groups.push([c]);
-  }
-  const ordered = [];
-  for (const g of groups) {
-    if (g.length > 1) {
-      g.forEach(c => c.tieBroken = true);
-      for (let i = g.length - 1; i > 0; i--) {           // sorteio
-        const j = crypto.randomInt(i + 1);
-        [g[i], g[j]] = [g[j], g[i]];
-      }
-    }
-    ordered.push(...g);
-  }
-  r.contests = ordered;
+  r.contests.sort((a, b) => a.ts - b.ts);
+}
+
+// contestador da vez: o primeiro da fila que ainda nao posicionou
+function activeContester(room) {
+  return room.round?.contests.find(c => c.slot === null) || null;
+}
+
+// intervalo de anos que um slot representa na linha do tempo de uma entidade
+function slotInterval(room, entityId, slot) {
+  const tl = timelineOf(room, entityId);
+  return {
+    left: slot > 0 ? tl[slot - 1].year : null,
+    right: slot < tl.length ? tl[slot].year : null
+  };
 }
 
 function placeContestCard(room, playerId, slot) {
@@ -302,8 +302,12 @@ function placeContestCard(room, playerId, slot) {
   const tl = timelineOf(room, c.entityId);
   slot = Number(slot);
   if (!(slot >= 0 && slot <= tl.length)) return { error: 'Posicao invalida.' };
+  // contestacao e sequencial: so o contestador da vez posiciona
+  const active = activeContester(room);
+  if (active && active.playerId !== playerId) return { error: 'Aguarde sua vez na fila de contestacao.' };
   c.slot = slot;
-  return { ok: true, allPlaced: r.contests.every(x => x.slot !== null) };
+  const interval = slotInterval(room, c.entityId, slot);
+  return { ok: true, interval, allPlaced: r.contests.every(x => x.slot !== null) };
 }
 
 // jogador declara que NAO vai contestar; quando todos os elegiveis se resolvem,
@@ -432,6 +436,48 @@ function reveal(room) {
   return results;
 }
 
+// ---------- correcao de dados de musica (exige unanimidade dos conectados) ----------
+const { applyOverride } = require('./songs');
+
+function proposeFix(room, playerId, songId, fields) {
+  if (room.pendingFix) return { error: 'Ja existe uma proposta em votacao.' };
+  const song = room.playedSongs.find(s => s.id === songId);
+  if (!song) return { error: 'Essa musica nao apareceu nesta partida.' };
+  const clean = {};
+  if (fields.year) { const y = Number(fields.year); if (y >= 1900 && y <= 2030) clean.year = y; }
+  if (fields.title) clean.title = String(fields.title).slice(0, 80).trim();
+  if (fields.artist) clean.artist = String(fields.artist).slice(0, 60).trim();
+  if (fields.composer) clean.composer = String(fields.composer).slice(0, 80).trim();
+  if (!Object.keys(clean).length) return { error: 'Nenhum campo valido para corrigir.' };
+  const proposer = room.players.find(p => p.id === playerId);
+  room.pendingFix = { songId, before: { title: song.title, artist: song.artist, composer: song.composer, year: song.year },
+    fields: clean, proposedBy: playerId, proposerName: proposer?.name || '?', approvals: new Set([playerId]) };
+  return { ok: true, fix: room.pendingFix };
+}
+
+function voteFix(room, playerId, approve) {
+  const fix = room.pendingFix;
+  if (!fix) return { error: 'Nenhuma proposta em votacao.' };
+  if (!approve) {
+    room.pendingFix = null;
+    return { ok: true, rejected: true };
+  }
+  fix.approvals.add(playerId);
+  const connected = room.players.filter(p => p.connected).map(p => p.id);
+  const unanimous = connected.every(id => fix.approvals.has(id));
+  if (!unanimous) return { ok: true, pending: true, approvals: fix.approvals.size, needed: connected.length };
+  // unanimidade: aplica no banco (persistente) e no historico da sala
+  applyOverride(fix.songId, fix.fields);
+  const apply = (s) => { if (s && s.id === fix.songId) Object.assign(s, fix.fields); };
+  room.playedSongs.forEach(apply);
+  apply(room.round?.card);
+  room.players.forEach(p => p.timeline.forEach(apply));
+  Object.values(room.teams).forEach(t => t.timeline.forEach(apply));
+  const applied = { songId: fix.songId, fields: fix.fields, before: fix.before };
+  room.pendingFix = null;
+  return { ok: true, applied };
+}
+
 function leader(room) {
   let best = null, len = -1;
   for (const eid of entities(room)) {
@@ -461,7 +507,11 @@ function publicState(room) {
     roundStartedAt: room.round?.startedAt || null,
     hurryActive: Boolean(room.round?.hurry),
     nextTurnPlayerId: room.state === 'playing' && room.round?.phase === 'reveal' ? (peekNextTurn(room)?.id || null) : null,
-    contests: room.round ? room.round.contests.map(c => ({ playerId: c.playerId, entityId: c.entityId, placed: c.slot !== null, tieBroken: c.tieBroken })) : [],
+    contests: room.round ? room.round.contests.map(c => ({
+      playerId: c.playerId, entityId: c.entityId, placed: c.slot !== null, tieBroken: c.tieBroken,
+      interval: c.slot !== null ? slotInterval(room, c.entityId, c.slot) : null
+    })) : [],
+    activeContesterId: room.round ? (room.round.contests.find(c => c.slot === null)?.playerId || null) : null,
     deckLeft: room.deck.length,
     winner: room.winner,
     screenCode: room.screenCode,
@@ -477,6 +527,12 @@ function publicState(room) {
       fichas: v.fichas, cartas: v.timeline.length,
       timeline: v.timeline.map(c => ({ year: c.year, title: c.title, artist: c.artist }))
     }])) : null,
+    playedSongs: room.playedSongs.map(s => ({ id: s.id, title: s.title, artist: s.artist, composer: s.composer, year: s.year })),
+    pendingFix: room.pendingFix ? {
+      songId: room.pendingFix.songId, fields: room.pendingFix.fields, before: room.pendingFix.before,
+      proposedBy: room.pendingFix.proposedBy, proposerName: room.pendingFix.proposerName,
+      approvals: [...room.pendingFix.approvals], needed: room.players.filter(p => p.connected).length
+    } : null,
     reveal: room.round?.phase === 'reveal' ? room.round.results : null
   };
 }
@@ -505,6 +561,7 @@ function listPublicRooms() {
 module.exports = {
   rooms, createRoom, getRoom, addPlayer, startGame, startRound,
   placeTurnCard, requestContest, placeContestCard, passContest, allNonTurnResolved, submitGuess, allEligibleGuessed, reveal,
+  activeContester, slotInterval, proposeFix, voteFix,
   publicState, timelineOf, removeRoom, entities, listPublicRooms, peekNextTurn, drawCard, getRoomByScreenCode,
   HURRY_AFTER_MS, HURRY_COUNTDOWN_MS, CONTEST_WINDOW_MS, GUESS_WINDOW_MS, MAX_PLAYERS
 };

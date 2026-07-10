@@ -4,6 +4,7 @@ const path = require('path');
 
 const DB_PATH = path.join(__dirname, '..', 'data', 'songs.json');
 const EXTRA_PATH = path.join(__dirname, '..', 'data', 'songs-extra.json'); // gerado por scripts/import-deezer.js
+const OVERRIDES_PATH = path.join(__dirname, '..', 'data', 'overrides.json'); // correcoes aprovadas pelos jogadores
 
 let cache = null;
 
@@ -14,6 +15,10 @@ function loadAll() {
   if (fs.existsSync(EXTRA_PATH)) {
     try { extra = JSON.parse(fs.readFileSync(EXTRA_PATH, 'utf8')); } catch (e) { extra = []; }
   }
+  let overrides = {};
+  if (fs.existsSync(OVERRIDES_PATH)) {
+    try { overrides = JSON.parse(fs.readFileSync(OVERRIDES_PATH, 'utf8')); } catch (e) { overrides = {}; }
+  }
   const seen = new Set();
   cache = [...base, ...extra].filter(s => {
     if (!s.title || !s.artist || !s.year) return false;
@@ -21,10 +26,23 @@ function loadAll() {
     if (seen.has(key)) return false;
     seen.add(key);
     s.id = s.id || key.replace(/[^a-z0-9]+/g, '-');
+    if (overrides[s.id]) Object.assign(s, overrides[s.id]);   // correcoes da comunidade
     s.decade = Math.floor(s.year / 10) * 10;
     return true;
   });
   return cache;
+}
+
+// Correcao aprovada por unanimidade: persiste em overrides.json e atualiza o cache em memoria
+function applyOverride(songId, fields) {
+  let overrides = {};
+  if (fs.existsSync(OVERRIDES_PATH)) {
+    try { overrides = JSON.parse(fs.readFileSync(OVERRIDES_PATH, 'utf8')); } catch (e) { overrides = {}; }
+  }
+  overrides[songId] = { ...(overrides[songId] || {}), ...fields };
+  fs.writeFileSync(OVERRIDES_PATH, JSON.stringify(overrides, null, 1));
+  const s = (cache || []).find(x => x.id === songId);
+  if (s) { Object.assign(s, fields); s.decade = Math.floor(s.year / 10) * 10; }
 }
 
 /**
@@ -74,4 +92,4 @@ function stats() {
   };
 }
 
-module.exports = { loadAll, buildDeck, stats };
+module.exports = { loadAll, buildDeck, stats, applyOverride };

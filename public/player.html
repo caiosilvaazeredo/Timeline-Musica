@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Vitrola, Jogador</title>
-<link rel="stylesheet" href="/base.css?v=6afb4e41">
-<link rel="stylesheet" href="/player.css?v=6afb4e41">
+<link rel="stylesheet" href="/base.css?v=b36c7532">
+<link rel="stylesheet" href="/player.css?v=b36c7532">
 </head>
 <body>
 
@@ -62,6 +62,15 @@
     </div>
   </div>
   <ul id="lobby-list" class="lobby-list"></ul>
+  <div class="lobby-chat">
+    <p class="lbl">Chat da sala</p>
+    <div id="lobby-chat-log" class="lobby-chat-log" aria-live="polite"></div>
+    <form id="lobby-chat-form" class="chat-form">
+      <input id="lobby-chat-input" maxlength="140" placeholder="Fala ai...">
+      <button class="btn-ghost" type="submit">Enviar</button>
+    </form>
+  </div>
+  <p class="tut-link"><a href="/tutorial" target="_blank" rel="noopener">Como jogar (tutorial)</a></p>
 </section>
 
 <!-- ============ JOGO ============ -->
@@ -80,6 +89,15 @@
 
   <button id="btn-hurry" class="btn-ghost hurry hidden">Apressar (liga cronometro de 30s)</button>
   <button id="btn-pass-contest" class="btn-ghost pass hidden">Nao vou contestar</button>
+
+  <!-- previa da linha do tempo do jogador da vez (todos acompanham do celular) -->
+  <div id="turn-preview" class="turn-preview hidden">
+    <p class="lbl" id="turn-preview-label"></p>
+    <div id="turn-preview-line" class="my-timeline"></div>
+  </div>
+
+  <!-- fila de contestacao: quem ja apostou e onde -->
+  <div id="contest-log" class="contest-log hidden"></div>
 
   <!-- botoes do jogador da vez -->
   <div class="turn-tools">
@@ -125,6 +143,9 @@
 
   <!-- resultado da rodada -->
   <div id="p-reveal" class="p-reveal hidden"></div>
+  <button id="btn-fix-data" class="btn-ghost fixbtn hidden">Corrigir dados desta musica</button>
+
+  </div>
 
   <!-- minha linha do tempo -->
   <div class="my-line">
@@ -146,14 +167,36 @@
 </section>
 
 <!-- ============ FIM ============ -->
+
+<!-- proposta de correcao: formulario e votacao -->
+<div id="fix-form" class="fix-form hidden">
+  <p class="lbl">Corrigir dados (vale se TODOS aprovarem)</p>
+  <input id="fx-title" placeholder="Titulo">
+  <input id="fx-artist" placeholder="Interprete">
+  <input id="fx-composer" placeholder="Autor original">
+  <input id="fx-year" type="number" placeholder="Ano de lancamento">
+  <div class="guess-actions">
+    <button id="btn-fx-send" class="btn-gold">Propor correcao</button>
+    <button id="btn-fx-cancel" class="btn-ghost">Cancelar</button>
+  </div>
+</div>
+
+<div id="fix-vote" class="fix-vote hidden">
+  <p id="fix-vote-text"></p>
+  <div class="guess-actions">
+    <button id="btn-fx-yes" class="btn-gold">Aprovar</button>
+    <button id="btn-fx-no" class="btn-hot">Recusar</button>
+  </div>
+
 <section id="p-end" class="pscreen hidden">
   <h1 id="end-msg"></h1>
-  <p class="lbl">Aguarde a revanche na TV ou saia da sala.</p>
+  <p class="lbl">Musicas da partida (toque em corrigir se achou algo errado)</p>
+  <div id="end-songs" class="end-songs"></div>
   <button class="btn-ghost" onclick="location.href='/'">Sair</button>
 </section>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/fx.js?v=6afb4e41"></script>
-<script src="/player.js?v=6afb4e41"></script>
+<script src="/fx.js?v=b36c7532"></script>
+<script src="/player.js?v=b36c7532"></script>
 </body>
 </html>

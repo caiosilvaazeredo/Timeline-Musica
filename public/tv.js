@@ -265,10 +265,33 @@ socket.on('round:start', async ({ number, turnPlayerId }) => {
   await playCurrentTrack();
 });
 
-socket.on('turn:placed', () => {
+socket.on('turn:placed', ({ interval }) => {
   clearInterval(window._cd);
-  $('#phase-status').textContent = 'Carta posicionada. Janela de contestacao aberta: usem o botao no celular.';
+  stopAudio();   // a jogada interrompe a musica na hora
+  $('#phase-status').textContent = `Carta posicionada ${fmtInterval(interval)}. Janela de contestacao aberta!`;
   FX.zoom($('#phase-status'));
+});
+
+function fmtInterval(itv) {
+  if (!itv) return '';
+  if (itv.left === null && itv.right === null) return 'na linha vazia';
+  if (itv.left === null) return `antes de ${itv.right}`;
+  if (itv.right === null) return `depois de ${itv.left}`;
+  return `entre ${itv.left} e ${itv.right}`;
+}
+
+// fila sequencial de contestacao: quem esta contestando agora e a escolha de quem ja foi
+socket.on('contest:turn', ({ playerId }) => {
+  const p = STATE?.players.find(x => x.id === playerId);
+  $('#phase-status').textContent = `${p?.name || '?'} esta contestando: escolhendo a posicao...`;
+});
+
+socket.on('contest:placed', ({ name, pet, interval }) => {
+  const chip = document.createElement('span');
+  chip.className = 'contest-chip';
+  chip.innerHTML = `${petImg(pet)} ${esc(name)} apostou ${esc(fmtInterval(interval))}`;
+  $('#contest-strip').appendChild(chip);
+  FX.zoom(chip);
 });
 
 // outro jogador acionou o cronometro de 30s
@@ -376,6 +399,29 @@ socket.on('playback:stop', () => {
   $('#phase-status').textContent = 'O jogador da vez cortou a musica para responder!';
 });
 
+socket.on('fix:proposal', (fix) => renderFixBanner(fix));
+socket.on('fix:update', ({ approvals, needed }) => {
+  const el = $('#fix-banner');
+  if (!el.classList.contains('hidden')) el.querySelector('.fx-count').textContent = `${approvals}/${needed}`;
+});
+socket.on('fix:applied', ({ fields }) => {
+  $('#fix-banner').classList.add('hidden');
+  toast('Correcao aprovada por todos e salva no banco de musicas!');
+  FX.confetti(50);
+});
+socket.on('fix:rejected', () => {
+  $('#fix-banner').classList.add('hidden');
+  toast('Proposta de correcao recusada.');
+});
+
+function renderFixBanner(fix) {
+  if (!fix) return;
+  const changes = Object.entries(fix.fields).map(([k, v]) => `${k === 'year' ? 'ano' : k}: ${esc(String(fix.before[k]))} -> <b>${esc(String(v))}</b>`).join(' | ');
+  const el = $('#fix-banner');
+  el.innerHTML = `${esc(fix.proposerName)} propos corrigir <b>${esc(fix.before.title)}</b> (${changes}). Aprovacao: <span class="fx-count">${fix.approvals.length}/${fix.needed}</span>. Votem no celular!`;
+  el.classList.remove('hidden');
+}
+
 socket.on('room:closed', () => {
   sessionStorage.removeItem('vitrola_tv_room');
   location.href = '/';
@@ -418,6 +464,10 @@ function render(state) {
     sl.querySelectorAll('.kick-screen').forEach(b =>
       b.addEventListener('click', () => socket.emit('tv:kick-screen', { n: Number(b.dataset.n) })));
   }
+
+  // proposta de correcao pendente sobrevive a reconexoes
+  if (state.pendingFix) renderFixBanner(state.pendingFix);
+  else $('#fix-banner').classList.add('hidden');
 
   // pausa
   $('#pause-overlay').classList.toggle('hidden', state.state !== 'paused');
@@ -542,6 +592,13 @@ function showEnd(winner) {
       `<div class="place p${i + 1}"><div class="pos">${i + 1}º</div>${petImg(r.pet, 'pet-img big')}<div>${esc(r.label)}</div><div class="num">${r.cartas} cartas</div></div>`);
   });
 
+  const ps = $('#played-songs');
+  ps.innerHTML = (STATE.playedSongs || []).map(s => `
+    <div class="played-song" style="--dec:${decColor(s.year)}">
+      <span class="py">${s.year}</span> <span class="pt">${esc(s.title)}</span>
+      <div class="pa">Interprete: ${esc(s.artist)}${s.composer && s.composer !== s.artist ? ` | Autor: ${esc(s.composer)}` : ''}</div>
+    </div>`).join('');
+
   const ft = $('#final-timelines');
   ft.innerHTML = '';
   ranking.forEach(r => {
@@ -573,7 +630,8 @@ async function playCurrentTrack(isReplay = false, attempt = 0) {
     }
 
     showVinyl(true);
-    const dur = (STATE?.config?.duracaoTrechoSeg || 30) * 1000;
+    let dur = Number(STATE?.config?.duracaoTrechoSeg) * 1000;
+    if (!Number.isFinite(dur) || dur <= 0) dur = 30000;
 
     if (info.type === 'preview') {
       // o preview do Deezer dura uns 30s; se a duracao configurada for maior,
@@ -620,10 +678,17 @@ function showVinyl(on) {
 }
 
 function startProgress(durMs) {
+  if (!Number.isFinite(durMs) || durMs <= 0) durMs = 30000;   // duracao invalida ja deixava a barra cheia
+  const bar = $('#progress-bar');
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+  void bar.offsetWidth;                                        // zera sem animar a partir do valor antigo
+  bar.style.transition = 'width .5s linear';
   const start = Date.now();
+  clearInterval(progressTimer);
   progressTimer = setInterval(() => {
     const pct = Math.min(100, ((Date.now() - start) / durMs) * 100);
-    $('#progress-bar').style.width = pct + '%';
+    bar.style.width = pct + '%';
     if (pct >= 100) clearInterval(progressTimer);
   }, 400);
 }
